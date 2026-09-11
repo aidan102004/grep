@@ -1,0 +1,3 @@
+/Users/aidanabidi/grep/build/CMakeFiles/grep.dir
+/Users/aidanabidi/grep/build/CMakeFiles/edit_cache.dir
+/Users/aidanabidi/grep/build/CMakeFiles/rebuild_cache.dir
