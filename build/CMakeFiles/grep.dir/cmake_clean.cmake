@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/grep.dir/src/grep.cpp.o"
+  "CMakeFiles/grep.dir/src/grep.cpp.o.d"
   "CMakeFiles/grep.dir/src/main.cpp.o"
   "CMakeFiles/grep.dir/src/main.cpp.o.d"
   "bin/grep"

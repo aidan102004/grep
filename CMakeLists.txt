@@ -11,7 +11,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 # Source files
 set(SOURCES
     src/main.cpp
-    # Add more .cpp files as you create them
+    src/grep.cpp
     # src/grep.cpp
     # src/matcher.cpp
     # src/util.cpp

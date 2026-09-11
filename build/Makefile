@@ -129,6 +129,30 @@ grep/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/build
 .PHONY : grep/fast
 
+src/grep.o: src/grep.cpp.o
+.PHONY : src/grep.o
+
+# target to build an object file
+src/grep.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/src/grep.cpp.o
+.PHONY : src/grep.cpp.o
+
+src/grep.i: src/grep.cpp.i
+.PHONY : src/grep.i
+
+# target to preprocess a source file
+src/grep.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/src/grep.cpp.i
+.PHONY : src/grep.cpp.i
+
+src/grep.s: src/grep.cpp.s
+.PHONY : src/grep.s
+
+# target to generate assembly for a file
+src/grep.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/src/grep.cpp.s
+.PHONY : src/grep.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -162,6 +186,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... grep"
+	@echo "... src/grep.o"
+	@echo "... src/grep.i"
+	@echo "... src/grep.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
