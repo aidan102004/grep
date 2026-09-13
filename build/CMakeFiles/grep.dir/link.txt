@@ -1,1 +1,1 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/grep.dir/src/main.cpp.o CMakeFiles/grep.dir/src/grep.cpp.o -o bin/grep
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/grep.dir/src/main.cpp.o CMakeFiles/grep.dir/src/grep.cpp.o CMakeFiles/grep.dir/src/regexengine.cpp.o -o bin/grep

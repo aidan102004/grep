@@ -177,6 +177,30 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/regexengine.o: src/regexengine.cpp.o
+.PHONY : src/regexengine.o
+
+# target to build an object file
+src/regexengine.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/src/regexengine.cpp.o
+.PHONY : src/regexengine.cpp.o
+
+src/regexengine.i: src/regexengine.cpp.i
+.PHONY : src/regexengine.i
+
+# target to preprocess a source file
+src/regexengine.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/src/regexengine.cpp.i
+.PHONY : src/regexengine.cpp.i
+
+src/regexengine.s: src/regexengine.cpp.s
+.PHONY : src/regexengine.s
+
+# target to generate assembly for a file
+src/regexengine.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/src/regexengine.cpp.s
+.PHONY : src/regexengine.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -192,6 +216,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/regexengine.o"
+	@echo "... src/regexengine.i"
+	@echo "... src/regexengine.s"
 .PHONY : help
 
 

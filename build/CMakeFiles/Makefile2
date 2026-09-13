@@ -85,12 +85,12 @@ clean: CMakeFiles/grep.dir/clean
 CMakeFiles/grep.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/aidanabidi/grep/build/CMakeFiles --progress-num=1,2,3 "Built target grep"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/aidanabidi/grep/build/CMakeFiles --progress-num=1,2,3,4 "Built target grep"
 .PHONY : CMakeFiles/grep.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/grep.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/aidanabidi/grep/build/CMakeFiles 3
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/aidanabidi/grep/build/CMakeFiles 4
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/grep.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/aidanabidi/grep/build/CMakeFiles 0
 .PHONY : CMakeFiles/grep.dir/rule
@@ -102,7 +102,7 @@ grep: CMakeFiles/grep.dir/rule
 # codegen rule for target.
 CMakeFiles/grep.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/grep.dir/build.make CMakeFiles/grep.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/aidanabidi/grep/build/CMakeFiles --progress-num=1,2,3 "Finished codegen for target grep"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/aidanabidi/grep/build/CMakeFiles --progress-num=1,2,3,4 "Finished codegen for target grep"
 .PHONY : CMakeFiles/grep.dir/codegen
 
 # clean rule for target.

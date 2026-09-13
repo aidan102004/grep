@@ -12,7 +12,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 set(SOURCES
     src/main.cpp
     src/grep.cpp
-    # src/grep.cpp
+    src/regexengine.cpp
     # src/matcher.cpp
     # src/util.cpp
 )

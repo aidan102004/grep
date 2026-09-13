@@ -3,6 +3,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/grep.dir/src/grep.cpp.o.d"
   "CMakeFiles/grep.dir/src/main.cpp.o"
   "CMakeFiles/grep.dir/src/main.cpp.o.d"
+  "CMakeFiles/grep.dir/src/regexengine.cpp.o"
+  "CMakeFiles/grep.dir/src/regexengine.cpp.o.d"
   "bin/grep"
   "bin/grep.pdb"
 )
