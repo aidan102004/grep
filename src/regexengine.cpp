@@ -74,6 +74,28 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
 
 }
 
+bool RegexEngine::match(std::vector<Token>& input_tokens, std::string& word) {
+    tokens = input_tokens;
+    return try_match(word, 0, 0);
+}
+bool RegexEngine::try_match(std::string& word, size_t i, size_t p) {
+    if (p > tokens.size()) {
+        return true;
+    }
+    auto key = std::make_pair(i, p);
+    auto it = memo.find(key);
+    if (it != memo.end()) {
+        return it->second;
+    }
+
+    bool result = false;
+    if (i > word.size() && tokens[p].func(word, i)) {
+        result = try_match(word, i + 1, p + 1);
+    }
+    memo[key] = result;
+    return result;
+}
+
 void RegexEngine::handle_escape(std::vector<Token>& tokens, char c) {
     static const std::unordered_map<char, TokenType> escape_map = { //refactor to class scope later
         {'d', TokenType::DIGIT},

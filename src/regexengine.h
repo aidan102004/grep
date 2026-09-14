@@ -1,8 +1,9 @@
 #pragma once
 
 #include <string>
+  #include <map>
 
-using token_func = std::function<bool(const std::string& input, const std::string& pattern, size_t& input_pos)>;
+using token_func = std::function<bool(const std::string& input, size_t& input_pos)>;
 
 enum class TokenType {
     LITERAL,
@@ -39,12 +40,15 @@ struct Token {
 };
 
 class RegexEngine {
-    std::vector<Token> tokens;
+private:
     std::unordered_map<TokenType, token_func> func_register;
+    std::vector<Token> tokens;
+    std::map<std::pair<size_t, size_t>, bool> memo;
 public:
     RegexEngine();
     void register_functions();
-    std::vector<Token> parser(const std::string& pattern);
+    bool match(std::vector<Token>& tokens, std::string& word);
+    bool try_match(std::string& word, size_t i, size_t p);
     void handle_escape(std::vector<Token>& tokens, char c);
     bool literal(const std::string& input, const std::string& pattern, size_t& input_pos);
     bool digit(const std::string& input, const std::string& pattern, size_t& input_pos);
