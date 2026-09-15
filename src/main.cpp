@@ -18,7 +18,7 @@ int main() {
         if (command.empty()) continue;
         std::vector<std::string> tokens;
         parser(tokens, command);
-        std::string output = (grep.handle_grep(tokens) == 0) ? "true" : "false"; //start dispatch process
+        std::string output = (grep.handle_grep(tokens) == 0) ? "false" : "true"; //start dispatch process
         std::cout << output << std::endl;
     }
 }

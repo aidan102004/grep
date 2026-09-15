@@ -1,67 +1,57 @@
 #pragma once
-
+#include <vector>
 #include <string>
-  #include <map>
-
-using token_func = std::function<bool(const std::string& input, size_t& input_pos)>;
+#include <unordered_map>
+#include <map>
+#include <functional>
 
 enum class TokenType {
     LITERAL,
-    DIGIT,          // \d
-    NOT_DIGIT,
-    WORD,           // \w
+    DIGIT,
+    WORD,
     NOT_WORD,
-    CHAR_GROUP,     // [abc]
-    NEGATED_GROUP,  // [^abc]
+    NOT_DIGIT,
     SPACE,
     NOT_SPACE,
-    
-    //quantifiers 
-    STAR,           // *
-    PLUS,           // +
-    QUESTION,       // ?
-    
-    //advanced 
-    ANCHOR_START,   // ^
-    ANCHOR_END,     // $
-    ALTERNATION,    // |
-    GROUP,          // (...)
+    CHAR_GROUP,
+    NEGATED_GROUP,
+    ANCHOR_START,
+    ANCHOR_END
 };
 
 struct Token {
     TokenType type;
-    std::string val;
-    token_func func;
-    int min_occ = 1;
-    int max_occ = 1;
-
-    Token(TokenType type, std::string val, token_func func, int min_occ, int max_occ) 
-        : type(type), val(val), func(func), min_occ(min_occ), max_occ(max_occ) {}
+    std::string value;
+    std::function<bool(const std::string&, size_t&, const Token&)> func;
+    int min_rep;
+    int max_rep;
 };
 
 class RegexEngine {
-private:
-    std::unordered_map<TokenType, token_func> func_register;
-    std::vector<Token> tokens;
-    std::map<std::pair<size_t, size_t>, bool> memo;
 public:
     RegexEngine();
+    std::vector<Token> parser(const std::string& pattern);
+    bool match(std::vector<Token>& input_tokens, std::string& word);
+
+private:
+    std::vector<Token> tokens;
+    std::map<std::pair<size_t, size_t>, bool> memo;
+    std::unordered_map<int, std::function<bool(const std::string&, size_t&, const Token&)>> func_register;
+
     void register_functions();
-    bool match(std::vector<Token>& tokens, std::string& word);
-    bool try_match(std::string& word, size_t i, size_t p);
     void handle_escape(std::vector<Token>& tokens, char c);
-    bool literal(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool digit(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool word(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool notdig(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool notword(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool space(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool notspace(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool char_group(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool negated_group(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool star(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool plus(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool question(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool start(const std::string& input, const std::string& pattern, size_t& input_pos);
-    bool end(const std::string& input, const std::string& pattern, size_t& input_pos);
+    bool try_match(std::string& word, size_t i, size_t p);
+
+    //these functions handle each tokens match check
+    bool literal(const std::string& input, size_t& input_pos, const Token& token);
+    bool digit(const std::string& input, size_t& input_pos, const Token& token);
+    bool word(const std::string& input, size_t& input_pos, const Token& token);
+    bool notdig(const std::string& input, size_t& input_pos, const Token& token);
+    bool notword(const std::string& input, size_t& input_pos, const Token& token);
+    bool space(const std::string& input, size_t& input_pos, const Token& token);
+    bool notspace(const std::string& input, size_t& input_pos, const Token& token);
+    bool char_group(const std::string& input, size_t& input_pos, const Token& token);
+    bool negated_group(const std::string& input, size_t& input_pos, const Token& token);
+    bool start(const std::string& input, size_t& input_pos, const Token& token);
+    bool end(const std::string& input, size_t& input_pos, const Token& token);
 };
