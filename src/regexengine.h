@@ -40,6 +40,7 @@ private:
 
     void register_functions();
     void handle_escape(std::vector<Token>& tokens, char c);
+    void handle_quantifiers(std::vector<Token>& tokens, char c);
     bool try_match(std::string& word, size_t i, size_t p);
 
     //these functions handle each tokens match check

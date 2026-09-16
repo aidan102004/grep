@@ -46,6 +46,6 @@ std::string tokenTypeToString(TokenType type) {
 /*helper for printing tokens so i can debug*/
 void Grep::print_helper(const std::vector<Token>& tokens) {
     for (const auto& t : tokens) {
-        std::cout << tokenTypeToString(t.type) << " : " << t.value << std::endl;
+        std::cout << tokenTypeToString(t.type) << " : " << t.value << " min-rep: " << t.min_rep << " | max-rep: " << t.max_rep << std::endl;
     }
 }
