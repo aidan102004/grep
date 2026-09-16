@@ -4,6 +4,15 @@
 #include <vector>
 #include <string>
 
+const std::string RED = "\033[31m";
+const std::string GREEN = "\033[32m";
+const std::string YELLOW = "\033[33m";
+const std::string BLUE = "\033[34m";
+const std::string BOLD = "\033[1m";
+const std::string BOLD_RED = "\033[1;31m";
+const std::string BOLD_GREEN = "\033[1;32m";
+const std::string RESET = "\033[0m";
+
 int Grep::handle_grep(const std::vector<std::string>& tokens) {
     /*
     std::string flag = (tokens[0][0] == '-') ? tokens[0] : "";
