@@ -41,7 +41,7 @@ std::string tokenTypeToString(TokenType type) {
         default: return "UNKNOWN";
     }
 }
-
+/*function for printing the entire string with matches highlighted*/
 void Grep::print_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies) {
     std::string final;
     size_t i = 0;

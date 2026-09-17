@@ -79,22 +79,22 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
                 handle_quantifiers(tokens, c); 
             else 
                 tokens.push_back({TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
-        } else if (c == '{') {
-            size_t end = pattern.find('}', i + 1);
+        } else if (c == '{') { //handle exactly, at least and between quantifiers
+            size_t end = pattern.find('}', i + 1); //check for closing bracket from the following pos
             if (end == std::string::npos) {
                 tokens.push_back({TokenType::LITERAL, "{", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}); //if we cannot find it then push the { as a literal
             } else {
-                if (end-i == 2) {
-                    tokens.back().min_rep = pattern[end - 1] - '0';
+                if (end-i == 2) { // {n} case
+                    tokens.back().min_rep = pattern[end - 1] - '0'; //cast char to int
                     tokens.back().max_rep = pattern[end - 1]- '0';
-                } else if (end-i == 3) {
+                } else if (end-i == 3) { //{n,} case
                     tokens.back().min_rep = (int)pattern[i+1]- '0';
                     tokens.back().max_rep = INT_MAX;
-                } else {
+                } else { // {n,m} case
                     tokens.back().min_rep = (int)pattern[i+1]- '0';
                     tokens.back().max_rep = (int)pattern[i+3]- '0';
                 }
-                i = end;
+                i = end; //increment i to end
             }
         } else if( c == '.') {
             tokens.push_back({TokenType::WILD_CARD, std::string(1, c), func_register[static_cast<int>(TokenType::WILD_CARD)], 1, 1});
@@ -120,17 +120,16 @@ void RegexEngine::handle_quantifiers(std::vector<Token>& tokens, char c) {
 }
 
 std::vector<std::pair<size_t, size_t>> RegexEngine::match(std::vector<Token>& input_tokens, std::string& word) {
-    tokens = input_tokens;
-    std::cout << tokens.size() << std::endl;
-    std::vector<std::pair<size_t, size_t>> res;
-    for (size_t s = 0; s < word.size(); s++) {
-        auto [end_index, matched] = try_match(word, s, 0);
-        if (matched) {
+    tokens = input_tokens; 
+    std::vector<std::pair<size_t, size_t>> res; //setup container to store index pairs
+    for (size_t s = 0; s < word.size(); s++) { //increment through the whole piece of text starting searching at every letter
+        auto [end_index, matched] = try_match(word, s, 0); //in the case we successfuly find a match we insert it and increment s
+        if (matched) { //this ensures we only pushback actual matches
             res.push_back({s, end_index});
-            s = end_index;
+            s = end_index; 
         }
     }
-    return res; //recursively match word with tokens at respective positions
+    return res; 
 }
 
 std::pair<size_t, bool> RegexEngine::try_match(std::string& word, size_t i, size_t p) {
@@ -146,9 +145,9 @@ std::pair<size_t, bool> RegexEngine::try_match(std::string& word, size_t i, size
         return it->second; //in the case it does return precomputed result
     }
     Token& token = tokens[p];
-    std::pair<size_t, bool> result = {i, false};
+    std::pair<size_t, bool> result = {i, false}; //setup return variable
 
-    if (token.type == TokenType::ANCHOR_START || token.type == TokenType::ANCHOR_END) {
+    if (token.type == TokenType::ANCHOR_START || token.type == TokenType::ANCHOR_END) { //we handle start and end anchors seperatly so we dont need to check the word length
         if (token.func(word, i, token)) {
             result = try_match(word, i, p + 1);
         }
@@ -168,10 +167,11 @@ std::pair<size_t, bool> RegexEngine::try_match(std::string& word, size_t i, size
         //backtrack by trying to match from longest match down to minimum
         int max_reps = (int)match_positions.size() - 1;
         for (int reps = max_reps; reps >= token.min_rep; reps--) {
-            if (reps < 0) break;
-            size_t pos_holder = match_positions[reps];
+            if (reps < 0) break; //this checks in the case there is no matches and it wont go negative and give us a seg fault
+            size_t pos_holder = match_positions[reps]; //reference holder for incrementing the pos
             auto [end_index, matched] = try_match(word, pos_holder, p + 1);
-            if (matched) { //once we find a match on the following token in the pattern begin recursion again
+            //if we find a match set values
+            if (matched) { 
                 result.second = true;
                 result.first = end_index;
                 break;
