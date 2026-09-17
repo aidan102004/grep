@@ -1,6 +1,7 @@
 #include "regexengine.h"
 #include <string>
 #include <cctype>
+#include <iostream>
 
 RegexEngine::RegexEngine(){
     register_functions();
@@ -41,6 +42,9 @@ void RegexEngine::register_functions() {
     func_register[static_cast<int>(TokenType::ANCHOR_END)] = [this](const std::string& input, size_t& pos, const Token& token) {
         return end(input, pos, token);
     };
+    func_register[static_cast<int>(TokenType::WILD_CARD)] = [this](const std::string& input, size_t& pos, const Token& token) {
+        return wildcard(input, pos, token);
+    };
 }
 
 
@@ -56,7 +60,7 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
             size_t end = pattern.find(']', i + 1); //finds pos of ] which we use to set i
             
             if (end == std::string::npos) {
-                tokens.push_back({TokenType::LITERAL, "[", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}); //if we cannot find it then push the ] as a literal
+                tokens.push_back({TokenType::LITERAL, "[", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}); //if we cannot find it then push the [ as a literal
             } else {
                 std::string chars = pattern.substr(i + 1, end - i - 1);
                 if (!chars.empty() && chars[0] == '^') { //check for negation
@@ -75,12 +79,32 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
                 handle_quantifiers(tokens, c); 
             else 
                 tokens.push_back({TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
+        } else if (c == '{') {
+            size_t end = pattern.find('}', i + 1);
+            if (end == std::string::npos) {
+                tokens.push_back({TokenType::LITERAL, "{", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}); //if we cannot find it then push the { as a literal
+            } else {
+                if (end-i == 2) {
+                    tokens.back().min_rep = pattern[end - 1] - '0';
+                    tokens.back().max_rep = pattern[end - 1]- '0';
+                } else if (end-i == 3) {
+                    tokens.back().min_rep = (int)pattern[i+1]- '0';
+                    tokens.back().max_rep = INT_MAX;
+                } else {
+                    tokens.back().min_rep = (int)pattern[i+1]- '0';
+                    tokens.back().max_rep = (int)pattern[i+3]- '0';
+                }
+                i = end;
+            }
+        } else if( c == '.') {
+            tokens.push_back({TokenType::WILD_CARD, std::string(1, c), func_register[static_cast<int>(TokenType::WILD_CARD)], 1, 1});
         } else {
             tokens.push_back({TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
         }    
     }
     return tokens;
 }
+
 
 void RegexEngine::handle_quantifiers(std::vector<Token>& tokens, char c) {
     if (c == '+') {
@@ -95,15 +119,24 @@ void RegexEngine::handle_quantifiers(std::vector<Token>& tokens, char c) {
     }
 }
 
-bool RegexEngine::match(std::vector<Token>& input_tokens, std::string& word) {
+std::vector<std::pair<size_t, size_t>> RegexEngine::match(std::vector<Token>& input_tokens, std::string& word) {
     tokens = input_tokens;
-    return try_match(word, 0, 0); //recursively match word with tokens at respective positions
+    std::cout << tokens.size() << std::endl;
+    std::vector<std::pair<size_t, size_t>> res;
+    for (size_t s = 0; s < word.size(); s++) {
+        auto [end_index, matched] = try_match(word, s, 0);
+        if (matched) {
+            res.push_back({s, end_index});
+            s = end_index;
+        }
+    }
+    return res; //recursively match word with tokens at respective positions
 }
 
-bool RegexEngine::try_match(std::string& word, size_t i, size_t p) {
+std::pair<size_t, bool> RegexEngine::try_match(std::string& word, size_t i, size_t p) {
     //base case if we have exceeded the length of tokens meaning we have completed them all
     if (p >= tokens.size()) {
-        return i == word.size(); //return true if input pos is at end of word
+        return {i, true}; //return true by default now because we search through the entire string
     }
     
     //memoisation, check if input and pattern pos pair exists in memo
@@ -113,7 +146,7 @@ bool RegexEngine::try_match(std::string& word, size_t i, size_t p) {
         return it->second; //in the case it does return precomputed result
     }
     Token& token = tokens[p];
-    bool result = false;
+    std::pair<size_t, bool> result = {i, false};
 
     if (token.type == TokenType::ANCHOR_START || token.type == TokenType::ANCHOR_END) {
         if (token.func(word, i, token)) {
@@ -133,9 +166,14 @@ bool RegexEngine::try_match(std::string& word, size_t i, size_t p) {
         }
         
         //backtrack by trying to match from longest match down to minimum
-        for (int reps = match_positions.size() - 1; reps >= token.min_rep; reps--) {
-            if (try_match(word, match_positions[reps], p + 1)) { //once we find a match on the following token in the pattern begin recursion again
-                result = true;
+        int max_reps = (int)match_positions.size() - 1;
+        for (int reps = max_reps; reps >= token.min_rep; reps--) {
+            if (reps < 0) break;
+            size_t pos_holder = match_positions[reps];
+            auto [end_index, matched] = try_match(word, pos_holder, p + 1);
+            if (matched) { //once we find a match on the following token in the pattern begin recursion again
+                result.second = true;
+                result.first = end_index;
                 break;
             }
         }
@@ -241,4 +279,7 @@ bool RegexEngine::start(const std::string& input, size_t& pos, const Token& toke
 
 bool RegexEngine::end(const std::string& input, size_t& pos, const Token& token) {
     return pos == input.size() || pos == '\n';
+}
+bool RegexEngine::wildcard(const std::string& input, size_t& pos, const Token& token) {
+    return input[pos] != '\n';
 }

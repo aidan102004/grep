@@ -13,6 +13,7 @@ enum class TokenType {
     NOT_DIGIT,
     SPACE,
     NOT_SPACE,
+    WILD_CARD,
     CHAR_GROUP,
     NEGATED_GROUP,
     ANCHOR_START,
@@ -31,17 +32,18 @@ class RegexEngine {
 public:
     RegexEngine();
     std::vector<Token> parser(const std::string& pattern);
-    bool match(std::vector<Token>& input_tokens, std::string& word);
+    std::vector<std::pair<size_t, size_t>> match(std::vector<Token>& input_tokens, std::string& word);
 
 private:
     std::vector<Token> tokens;
-    std::map<std::pair<size_t, size_t>, bool> memo;
+    //std::map<std::pair<size_t, size_t>, bool> memo;
+    std::map<std::pair<size_t, size_t>, std::pair<size_t, bool>> memo;
     std::unordered_map<int, std::function<bool(const std::string&, size_t&, const Token&)>> func_register;
 
     void register_functions();
     void handle_escape(std::vector<Token>& tokens, char c);
     void handle_quantifiers(std::vector<Token>& tokens, char c);
-    bool try_match(std::string& word, size_t i, size_t p);
+    std::pair<size_t, bool> try_match(std::string& word, size_t i, size_t p);
 
     //these functions handle each tokens match check
     bool literal(const std::string& input, size_t& input_pos, const Token& token);
@@ -55,4 +57,5 @@ private:
     bool negated_group(const std::string& input, size_t& input_pos, const Token& token);
     bool start(const std::string& input, size_t& input_pos, const Token& token);
     bool end(const std::string& input, size_t& input_pos, const Token& token);
+    bool wildcard(const std::string& input, size_t& input_pos, const Token& token);
 };
