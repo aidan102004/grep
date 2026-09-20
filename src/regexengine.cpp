@@ -2,6 +2,7 @@
 #include <string>
 #include <cctype>
 #include <iostream>
+#include <stack>
 
 RegexEngine::RegexEngine(){
     register_functions();
@@ -45,6 +46,22 @@ void RegexEngine::register_functions() {
     func_register[static_cast<int>(TokenType::WILD_CARD)] = [this](const std::string& input, size_t& pos, const Token& token) {
         return wildcard(input, pos, token);
     };
+    func_register[static_cast<int>(TokenType::ALTERNATION)] = [this](const std::string& input, size_t& pos, const Token& token) {
+        return alternation(input, pos, token);
+    };
+}
+
+void RegexEngine::handle_quantifiers(std::vector<Token>& tokens, char c) {
+    if (c == '+') {
+        tokens.back().min_rep = 1;
+        tokens.back().max_rep = INT_MAX;
+    } else if (c == '*') {
+        tokens.back().min_rep = 0;
+        tokens.back().max_rep = INT_MAX;
+    } else if (c == '?') {
+        tokens.back().min_rep = 0;
+        tokens.back().max_rep = 1;
+    }
 }
 
 
@@ -54,7 +71,8 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
     for (size_t i = 0; i < pattern.size(); i++) {
         char c = pattern[i];
         if (c == '\\') {
-            handle_escape(tokens, pattern[i + 1]); //handles all potential escape patterns
+            Token token = handle_escape(pattern[i + 1]); //handles all potential escape patterns
+            tokens.push_back(token);
             i++;
         } else if (c == '[') {
             size_t end = pattern.find(']', i + 1); //finds pos of ] which we use to set i
@@ -70,6 +88,18 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
                 }         
             i = end; //set increment
             }
+        } else if (c == '(') {
+            size_t end = pattern.find(')', i + 1);
+            if (end == std::string::npos) {
+                tokens.push_back({TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
+            } else {
+                auto [index, temp] = handle_inside_brackets(saved_brackets.size() + 1, pattern.substr(i + 1), end);
+                if (!temp.empty()) {
+                    tokens.insert(tokens.end(), temp.begin(), temp.end());
+                    i += index;
+                }
+            }
+
         } else if (c == '^') {
             tokens.push_back({TokenType::ANCHOR_START, std::string(1, c), func_register[static_cast<int>(TokenType::ANCHOR_START)], 1, 1});
         } else if (c == '$') {
@@ -105,19 +135,109 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
     return tokens;
 }
 
-
-void RegexEngine::handle_quantifiers(std::vector<Token>& tokens, char c) {
-    if (c == '+') {
-        tokens.back().min_rep = 1;
-        tokens.back().max_rep = INT_MAX;
-    } else if (c == '*') {
-        tokens.back().min_rep = 0;
-        tokens.back().max_rep = INT_MAX;
-    } else if (c == '?') {
-        tokens.back().min_rep = 0;
-        tokens.back().max_rep = 1;
+std::pair<int, std::vector<Token>> RegexEngine::handle_inside_brackets(int id, const std::string& pattern, size_t end_bracket_pos) {
+    std::vector<Token> temp_tokens;
+    int i = 0;
+    char cur_char;
+    cur_char = pattern[i];
+    while (cur_char != ')') {
+        if (pattern[i] == '(') {
+            size_t next = pattern.find(')', i + 1);
+            if (next == std::string::npos) {
+                temp_tokens.push_back({TokenType::LITERAL, "(", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
+                i++;
+            } else {
+                auto [index, temp_vector] = handle_inside_brackets(id + 1, pattern.substr(i + 1), end_bracket_pos);
+                temp_tokens.insert(temp_tokens.end(), temp_vector.begin(), temp_vector.end());
+                saved_brackets[id].insert(saved_brackets[id].end(), temp_vector.begin(), temp_vector.end());
+                int increment = (temp_vector[0].type == TokenType::ALTERNATION) ? 0 : 1;
+                i += index + increment;
+            }
+        } else {
+            std::pair<int, Token> token = deduce_type(pattern.substr(i), temp_tokens);
+            i += token.first + 1;
+            if (token.second.type == TokenType::NONE) {
+                saved_brackets[id][saved_brackets[id].size() - 1].max_rep = temp_tokens.back().max_rep;
+                saved_brackets[id][saved_brackets[id].size() - 1].min_rep = temp_tokens.back().min_rep;
+            } else {
+                if (i < pattern.size() && pattern[i] == '|' && temp_tokens.size() == 0) {
+                    token.second.alternatives.push_back(token.second);
+                    token.second.type = TokenType::ALTERNATION;
+                    token.second.func = func_register[static_cast<int>(TokenType::ALTERNATION)];
+                    for (size_t p = i + 1; p < end_bracket_pos; p += 2) {
+                        std::pair<int, Token> t = deduce_type(pattern.substr(p), temp_tokens);
+                        token.second.alternatives.push_back(t.second);
+                    }
+                    saved_brackets[id].push_back(token.second);
+                    temp_tokens.push_back(token.second);
+                    i = end_bracket_pos - 1;
+                    break;
+                } else {
+                    temp_tokens.push_back(token.second);
+                    saved_brackets[id].push_back(token.second);
+                }
+        }
+            }
+            
+        cur_char = pattern[i];
     }
+    i++;
+    return {i, temp_tokens};
 }
+
+std::pair<int, Token> RegexEngine::deduce_type(const std::string& pattern, std::vector<Token>& temp_tokens) {
+        char c = pattern[0];
+        int i = 0;
+        if (c == '\\') {
+            return {i + 1 , handle_escape(pattern[i+1])}; 
+        } else if (c == '[') {
+            size_t end = pattern.find(']', i + 1); //finds pos of ] which we use to set i
+            
+            if (end == std::string::npos) {
+                return {i, {TokenType::LITERAL, "[", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}}; //if we cannot find it then push the [ as a literal
+            } else {
+                std::string chars = pattern.substr(i + 1, end - i - 1);
+                if (!chars.empty() && chars[0] == '^') { //check for negation
+                    return {end, {TokenType::NEGATED_GROUP, chars.substr(1), func_register[static_cast<int>(TokenType::NEGATED_GROUP)], 1, 1}};
+                } else {
+                    return {end, {TokenType::CHAR_GROUP, chars, func_register[static_cast<int>(TokenType::CHAR_GROUP)], 1, 1}};
+                }         
+            }
+        } else if (c == '^') {
+            return {i, {TokenType::ANCHOR_START, std::string(1, c), func_register[static_cast<int>(TokenType::ANCHOR_START)], 1, 1}};
+        } else if (c == '$') {
+            return {i, {TokenType::ANCHOR_END, std::string(1, c), func_register[static_cast<int>(TokenType::ANCHOR_END)], 1, 1}};
+        } else if (c == '+' || c == '*' || c == '?') { //handle quantifiers
+            if (!temp_tokens.empty()) {
+                handle_quantifiers(temp_tokens, c); 
+                return {i, {TokenType::NONE, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}};
+            } else  {
+                return {i, {TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}};
+            }
+        } else if (c == '{') { //handle exactly, at least and between quantifiers
+            size_t end = pattern.find('}', i + 1); //check for closing bracket from the following pos
+            if (end == std::string::npos) {
+                return {i,{TokenType::LITERAL, "{", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}}; //if we cannot find it then push the { as a literal
+            } else {
+                if (end-i == 2) { // {n} case
+                    temp_tokens.back().min_rep = pattern[end - 1] - '0'; //cast char to int
+                    temp_tokens.back().max_rep = pattern[end - 1]- '0';
+                } else if (end-i == 3) { //{n,} case
+                    temp_tokens.back().min_rep = (int)pattern[i+1]- '0';
+                    temp_tokens.back().max_rep = INT_MAX;
+                } else { // {n,m} case
+                    temp_tokens.back().min_rep = (int)pattern[i+1]- '0';
+                    temp_tokens.back().max_rep = (int)pattern[i+3]- '0';
+                }
+                i = end; //increment i to end
+            }
+        } else if( c == '.') {
+            return {i, {TokenType::WILD_CARD, std::string(1, c), func_register[static_cast<int>(TokenType::WILD_CARD)], 1, 1}};
+        } else {
+            return {i, {TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}};
+        }    
+    }
+
 
 std::vector<std::pair<size_t, size_t>> RegexEngine::match(std::vector<Token>& input_tokens, std::string& word) {
     tokens = input_tokens; 
@@ -183,7 +303,7 @@ std::pair<size_t, bool> RegexEngine::try_match(std::string& word, size_t i, size
     return result; //return result
 }
 
-void RegexEngine::handle_escape(std::vector<Token>& tokens, char c) {
+Token RegexEngine::handle_escape(char c) {
     static const std::unordered_map<char, TokenType> escape_map = {
         {'d', TokenType::DIGIT},
         {'w', TokenType::WORD},
@@ -195,9 +315,9 @@ void RegexEngine::handle_escape(std::vector<Token>& tokens, char c) {
 
     auto it = escape_map.find(c);
     if (it != escape_map.end()) {
-        tokens.push_back({it->second, std::string(1, c), func_register[static_cast<int>(it->second)], 1, 1});
+        return {it->second, std::string(1, c), func_register[static_cast<int>(it->second)], 1, 1};
     } else {
-        tokens.push_back({TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
+        return {TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1};
     }
 }
 
@@ -278,8 +398,28 @@ bool RegexEngine::start(const std::string& input, size_t& pos, const Token& toke
 }
 
 bool RegexEngine::end(const std::string& input, size_t& pos, const Token& token) {
-    return pos == input.size() || pos == '\n';
+    return pos == input.size() || (pos < input.size() && input[pos] == '\n');
 }
+
 bool RegexEngine::wildcard(const std::string& input, size_t& pos, const Token& token) {
-    return input[pos] != '\n';
+    if (pos < input.size() && input[pos] != '\n') {
+        pos++; 
+        return true;
+    }
+    return false;
+}
+
+bool RegexEngine::alternation(const std::string& input, size_t& pos, const Token& token) {
+    size_t original_pos = pos;  
+    for (const auto& t : token.alternatives) {
+        pos = original_pos;  
+        if (t.func(input, pos, t)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::map<int, std::vector<Token>>& RegexEngine::get_saved() {
+    return saved_brackets;
 }

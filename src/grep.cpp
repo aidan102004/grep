@@ -19,6 +19,12 @@ int Grep::handle_grep(const std::vector<std::string>& tokens) {
     RegexEngine engine;
     std::vector<Token> parsed_tokens = engine.parser(pattern); //parse
     print_helper(parsed_tokens);
+    //helper to show what is stored in map for ()
+    std::cout << "saved brackets:" << std::endl;
+    for (const auto& [key, value] : engine.get_saved()) {
+        std::cout << key << std::endl;
+        print_helper(value);
+    }
     std::vector<std::pair<size_t, size_t>> matches_pair = engine.match(parsed_tokens, word); //match
     print_matches(word, matches_pair);
     return matches_pair.size();
@@ -38,6 +44,8 @@ std::string tokenTypeToString(TokenType type) {
         case TokenType::NEGATED_GROUP: return "NEGATED_GROUP";
         case TokenType::ANCHOR_START: return "ANCHOR_START";
         case TokenType::ANCHOR_END: return "ANCHOR_END";
+        case TokenType::WILD_CARD: return "WILDCARD";
+        case TokenType::ALTERNATION: return "ALTERNATION";
         default: return "UNKNOWN";
     }
 }
