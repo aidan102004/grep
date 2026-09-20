@@ -69,29 +69,10 @@ void RegexEngine::handle_quantifiers(std::vector<Token>& tokens, char c) {
 std::vector<Token> RegexEngine::parser(const std::string& pattern) {
     std::vector<Token> tokens;
     for (size_t i = 0; i < pattern.size(); i++) {
-        char c = pattern[i];
-        if (c == '\\') {
-            Token token = handle_escape(pattern[i + 1]); //handles all potential escape patterns
-            tokens.push_back(token);
-            i++;
-        } else if (c == '[') {
-            size_t end = pattern.find(']', i + 1); //finds pos of ] which we use to set i
-            
-            if (end == std::string::npos) {
-                tokens.push_back({TokenType::LITERAL, "[", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}); //if we cannot find it then push the [ as a literal
-            } else {
-                std::string chars = pattern.substr(i + 1, end - i - 1);
-                if (!chars.empty() && chars[0] == '^') { //check for negation
-                    tokens.push_back({TokenType::NEGATED_GROUP, chars.substr(1), func_register[static_cast<int>(TokenType::NEGATED_GROUP)], 1, 1});
-                } else {
-                    tokens.push_back({TokenType::CHAR_GROUP, chars, func_register[static_cast<int>(TokenType::CHAR_GROUP)], 1, 1});
-                }         
-            i = end; //set increment
-            }
-        } else if (c == '(') {
+        if (pattern[i] == '(') {
             size_t end = pattern.find(')', i + 1);
             if (end == std::string::npos) {
-                tokens.push_back({TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
+                tokens.push_back({TokenType::LITERAL, std::string(1, pattern[i]), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
             } else {
                 auto [index, temp] = handle_inside_brackets(saved_brackets.size() + 1, pattern.substr(i + 1), end);
                 if (!temp.empty()) {
@@ -99,38 +80,11 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
                     i += index;
                 }
             }
-
-        } else if (c == '^') {
-            tokens.push_back({TokenType::ANCHOR_START, std::string(1, c), func_register[static_cast<int>(TokenType::ANCHOR_START)], 1, 1});
-        } else if (c == '$') {
-            tokens.push_back({TokenType::ANCHOR_END, std::string(1, c), func_register[static_cast<int>(TokenType::ANCHOR_END)], 1, 1});
-        } else if (c == '+' || c == '*' || c == '?') { //handle quantifiers
-            if (!tokens.empty()) 
-                handle_quantifiers(tokens, c); 
-            else 
-                tokens.push_back({TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
-        } else if (c == '{') { //handle exactly, at least and between quantifiers
-            size_t end = pattern.find('}', i + 1); //check for closing bracket from the following pos
-            if (end == std::string::npos) {
-                tokens.push_back({TokenType::LITERAL, "{", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}); //if we cannot find it then push the { as a literal
-            } else {
-                if (end-i == 2) { // {n} case
-                    tokens.back().min_rep = pattern[end - 1] - '0'; //cast char to int
-                    tokens.back().max_rep = pattern[end - 1]- '0';
-                } else if (end-i == 3) { //{n,} case
-                    tokens.back().min_rep = (int)pattern[i+1]- '0';
-                    tokens.back().max_rep = INT_MAX;
-                } else { // {n,m} case
-                    tokens.back().min_rep = (int)pattern[i+1]- '0';
-                    tokens.back().max_rep = (int)pattern[i+3]- '0';
-                }
-                i = end; //increment i to end
-            }
-        } else if( c == '.') {
-            tokens.push_back({TokenType::WILD_CARD, std::string(1, c), func_register[static_cast<int>(TokenType::WILD_CARD)], 1, 1});
         } else {
-            tokens.push_back({TokenType::LITERAL, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
-        }    
+            auto [index, token] = deduce_type(pattern.substr(i), tokens);
+            if (token.type != TokenType::NONE) tokens.push_back(token);
+            i += index;
+        }
     }
     return tokens;
 }
@@ -164,8 +118,21 @@ std::pair<int, std::vector<Token>> RegexEngine::handle_inside_brackets(int id, c
                     token.second.alternatives.push_back(token.second);
                     token.second.type = TokenType::ALTERNATION;
                     token.second.func = func_register[static_cast<int>(TokenType::ALTERNATION)];
-                    for (size_t p = i + 1; p < end_bracket_pos; p += 2) {
-                        std::pair<int, Token> t = deduce_type(pattern.substr(p), temp_tokens);
+                    std::vector<std::string> alts;
+                    std::string current;
+                    for (size_t p = i + 1; p < end_bracket_pos; p++) {
+                        if (pattern[p] == '|') {
+                            if (!current.empty()) {
+                                alts.push_back(current);
+                            }
+                            current = "";
+                        } else {
+                            current += pattern[p];
+                        }
+                    }
+                    if (!current.empty()) alts.push_back(current);
+                    for (const auto& alt : alts) {
+                        std::pair<int, Token> t = deduce_type(alt, temp_tokens);
                         token.second.alternatives.push_back(t.second);
                     }
                     saved_brackets[id].push_back(token.second);
@@ -230,6 +197,7 @@ std::pair<int, Token> RegexEngine::deduce_type(const std::string& pattern, std::
                     temp_tokens.back().max_rep = (int)pattern[i+3]- '0';
                 }
                 i = end; //increment i to end
+                return {i, {TokenType::NONE, std::string(1, c), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}};
             }
         } else if( c == '.') {
             return {i, {TokenType::WILD_CARD, std::string(1, c), func_register[static_cast<int>(TokenType::WILD_CARD)], 1, 1}};
