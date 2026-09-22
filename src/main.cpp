@@ -18,8 +18,7 @@ int main() {
         if (command.empty()) continue;
         std::vector<std::string> tokens;
         parser(tokens, command);
-        int matches = grep.handle_grep(tokens);
-        std::cout << "grep: " << matches << " matches found" << std::endl;
+        grep.handle_grep(tokens);
     }
 }
 

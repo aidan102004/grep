@@ -67,6 +67,7 @@ void RegexEngine::handle_quantifiers(std::vector<Token>& tokens, char c) {
 
 /*parse pattern text into tokens*/
 std::vector<Token> RegexEngine::parser(const std::string& pattern) {
+    backreferences.clear();
     std::vector<Token> tokens;
     for (size_t i = 0; i < pattern.size(); i++) {
         if (pattern[i] == '(') { //deal with case we have brackets
@@ -216,7 +217,8 @@ std::pair<int, Token> RegexEngine::deduce_type(const std::string& pattern, std::
     }
 
 
-std::vector<std::pair<size_t, size_t>> RegexEngine::match(std::vector<Token>& input_tokens, std::string& word) {
+std::vector<std::pair<size_t, size_t>> RegexEngine::match(const std::vector<Token>& input_tokens, const std::string& word) {
+    memo.clear();   
     tokens = input_tokens; 
     std::vector<std::pair<size_t, size_t>> res; //setup container to store index pairs
     for (size_t s = 0; s < word.size(); s++) { //increment through the whole piece of text starting searching at every letter
@@ -229,7 +231,7 @@ std::vector<std::pair<size_t, size_t>> RegexEngine::match(std::vector<Token>& in
     return res; 
 }
 
-std::pair<size_t, bool> RegexEngine::try_match(std::string& word, size_t i, size_t p) {
+std::pair<size_t, bool> RegexEngine::try_match(const std::string& word, size_t i, size_t p) {
     //base case if we have exceeded the length of tokens meaning we have completed them all
     if (p >= tokens.size()) {
         return {i, true}; //return true by default now because we search through the entire string

@@ -35,7 +35,7 @@ class RegexEngine {
 public:
     RegexEngine();
     std::vector<Token> parser(const std::string& pattern);
-    std::vector<std::pair<size_t, size_t>> match(std::vector<Token>& input_tokens, std::string& word);
+    std::vector<std::pair<size_t, size_t>> match(const std::vector<Token>& input_tokens, const std::string& word);
     std::pair<int, Token> deduce_type(const std::string& pattern, std::vector<Token>& temp_tokens);
     std::pair<int, std::vector<Token>> handle_inside_brackets(int id, const std::string& pattern, size_t end_bracket_pos);
      //temp helper for debugging
@@ -52,7 +52,7 @@ private:
     Token handle_escape(char c);
     void handle_backreferences(std::vector<Token>& tokens, char c);
     void handle_quantifiers(std::vector<Token>& tokens, char c);
-    std::pair<size_t, bool> try_match(std::string& word, size_t i, size_t p);
+    std::pair<size_t, bool> try_match(const std::string& word, size_t i, size_t p);
 
     //these functions handle each tokens match check
     bool literal(const std::string& input, size_t& input_pos, const Token& token);
