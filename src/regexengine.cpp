@@ -69,52 +69,61 @@ void RegexEngine::handle_quantifiers(std::vector<Token>& tokens, char c) {
 std::vector<Token> RegexEngine::parser(const std::string& pattern) {
     std::vector<Token> tokens;
     for (size_t i = 0; i < pattern.size(); i++) {
-        if (pattern[i] == '(') {
+        if (pattern[i] == '(') { //deal with case we have brackets
             size_t end = pattern.find(')', i + 1);
             if (end == std::string::npos) {
                 tokens.push_back({TokenType::LITERAL, std::string(1, pattern[i]), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
             } else {
-                auto [index, temp] = handle_inside_brackets(saved_brackets.size() + 1, pattern.substr(i + 1), end);
+                auto [increment, temp] = handle_inside_brackets(backreferences.size() + 1, pattern.substr(i + 1), end); //returns increment and all tokens inside brackets
                 if (!temp.empty()) {
-                    tokens.insert(tokens.end(), temp.begin(), temp.end());
-                    i += index;
+                    tokens.insert(tokens.end(), temp.begin(), temp.end()); 
+                    i += increment;
                 }
             }
-        } else {
-            auto [index, token] = deduce_type(pattern.substr(i), tokens);
-            if (token.type != TokenType::NONE) tokens.push_back(token);
-            i += index;
+        } else if (pattern[i] == '\\' && std::isdigit(pattern[i+1])){
+            handle_backreferences(tokens, pattern[i+1]);
+            i++;
+        } else { //every other case can be handled by the deduce type method
+            auto [increment, token] = deduce_type(pattern.substr(i), tokens); //returns an increment and token based on the substr of pattern
+            if (token.type != TokenType::NONE) tokens.push_back(token); //will return NONE if quantifier
+            i += increment; //increment count
         }
     }
     return tokens;
 }
 
+/*recursive method for searching through brackets and nested brackets*/
 std::pair<int, std::vector<Token>> RegexEngine::handle_inside_brackets(int id, const std::string& pattern, size_t end_bracket_pos) {
-    std::vector<Token> temp_tokens;
-    int i = 0;
+    std::vector<Token> temp_tokens; //we were store the tokens contained in each pair of brackets 
+    int i = 0; //start counter at 0 as this stores how many chars we move past
     char cur_char;
     cur_char = pattern[i];
+    //increment over pattern within () until we find )
     while (cur_char != ')') {
-        if (pattern[i] == '(') {
-            size_t next = pattern.find(')', i + 1);
+        if (pattern[i] == '(') { //in case we find another bracket
+            size_t next = pattern.find(')', i + 1); //check this ( has a )
             if (next == std::string::npos) {
                 temp_tokens.push_back({TokenType::LITERAL, "(", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
                 i++;
             } else {
-                auto [index, temp_vector] = handle_inside_brackets(id + 1, pattern.substr(i + 1), end_bracket_pos);
-                temp_tokens.insert(temp_tokens.end(), temp_vector.begin(), temp_vector.end());
-                saved_brackets[id].insert(saved_brackets[id].end(), temp_vector.begin(), temp_vector.end());
-                int increment = (temp_vector[0].type == TokenType::ALTERNATION) ? 0 : 1;
-                i += index + increment;
+                auto [index, temp_vector] = handle_inside_brackets(id + 1, pattern.substr(i + 1), end_bracket_pos); //recursive run same function within those brackets
+                temp_tokens.insert(temp_tokens.end(), temp_vector.begin(), temp_vector.end()); //update tokens 
+                int increment = (temp_vector[0].type == TokenType::ALTERNATION) ? 0 : 1; 
+                i += index + increment; //increment by however many characters we moved over, including one in the case we alternated
             }
         } else {
-            std::pair<int, Token> token = deduce_type(pattern.substr(i), temp_tokens);
+            //in the case where there is not a sub bracket we find handle the tokens normally
+            if (pattern[i] == '\\' && std::isdigit(pattern[i+1])) {
+                handle_backreferences(temp_tokens, pattern[i+1]);
+                i += 2;
+            } else {
+                std::pair<int, Token> token = deduce_type(pattern.substr(i), temp_tokens);
             i += token.first + 1;
-            if (token.second.type == TokenType::NONE) {
-                saved_brackets[id][saved_brackets[id].size() - 1].max_rep = temp_tokens.back().max_rep;
-                saved_brackets[id][saved_brackets[id].size() - 1].min_rep = temp_tokens.back().min_rep;
+            if (token.second.type == TokenType::NONE) { //it is a quantifier we dont want to do anything
+                //do nothing
             } else {
                 if (i < pattern.size() && pattern[i] == '|' && temp_tokens.size() == 0) {
+                    //in the case of alternation, the first token will be a alternation token and store all the alternatives including itself
                     token.second.alternatives.push_back(token.second);
                     token.second.type = TokenType::ALTERNATION;
                     token.second.func = func_register[static_cast<int>(TokenType::ALTERNATION)];
@@ -135,20 +144,21 @@ std::pair<int, std::vector<Token>> RegexEngine::handle_inside_brackets(int id, c
                         std::pair<int, Token> t = deduce_type(alt, temp_tokens);
                         token.second.alternatives.push_back(t.second);
                     }
-                    saved_brackets[id].push_back(token.second);
                     temp_tokens.push_back(token.second);
                     i = end_bracket_pos - 1;
                     break;
                 } else {
                     temp_tokens.push_back(token.second);
-                    saved_brackets[id].push_back(token.second);
                 }
-        }
+                }
             }
-            
-        cur_char = pattern[i];
+        }   
+        cur_char = pattern[i]; //increment
     }
     i++;
+    //update backreferences map at the end after last ), so we dont even use a partially completed one
+    backreferences[id].insert(backreferences[id].end(), temp_tokens.begin(), temp_tokens.end()); 
+
     return {i, temp_tokens};
 }
 
@@ -159,7 +169,6 @@ std::pair<int, Token> RegexEngine::deduce_type(const std::string& pattern, std::
             return {i + 1 , handle_escape(pattern[i+1])}; 
         } else if (c == '[') {
             size_t end = pattern.find(']', i + 1); //finds pos of ] which we use to set i
-            
             if (end == std::string::npos) {
                 return {i, {TokenType::LITERAL, "[", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}}; //if we cannot find it then push the [ as a literal
             } else {
@@ -289,6 +298,14 @@ Token RegexEngine::handle_escape(char c) {
     }
 }
 
+void RegexEngine::handle_backreferences(std::vector<Token>& tokens, char c) {
+    int id = c - '0'; //cast to int
+    auto it = backreferences.find(id);
+    if (it != backreferences.end()) {
+        tokens.insert(tokens.end(), it->second.begin(), it->second.end()); //add saved tokens into current tokens
+    }
+}
+
 bool RegexEngine::literal(const std::string& input, size_t& pos, const Token& token) {
     if (pos < input.size() && input[pos] == token.value[0]) {
         pos++;
@@ -389,5 +406,5 @@ bool RegexEngine::alternation(const std::string& input, size_t& pos, const Token
 }
 
 std::map<int, std::vector<Token>>& RegexEngine::get_saved() {
-    return saved_brackets;
+    return backreferences;
 }
