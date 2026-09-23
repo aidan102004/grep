@@ -56,8 +56,8 @@ void Grep::handle_grep(const std::vector<std::string>& tokens) {
     for (const auto& file : contents) {
         //if any of the tokens following the pattern are files we run the search on those files, not the literal text
         if (file_exists(file)) {
-            file_names.push_back(file);
-            text.push_back(read_file(file));
+            std::vector<std::string> lines = read_file(file);
+            text.insert(text.end(), lines.begin(), lines.end());
         }
     }
     if (text.empty()) {
@@ -79,7 +79,7 @@ void Grep::handle_regex(const std::string& pattern, const std::vector<std::strin
     std::vector<Token> parsed_tokens = engine.parser(pattern);
     for (const auto& word : words) {
         std::vector<std::pair<size_t, size_t>> matches = engine.match(parsed_tokens, word);
-        if (matches.empty()) continue;
+        if (matches.empty()) continue;  //skip non-matching lines entirely
         if (!preferences.print_matches_only)
             print_matches(word, matches, should_colorise(preferences.option.c_str()), preferences.num_matches);
         else
@@ -139,15 +139,18 @@ std::pair<std::string, std::vector<std::string>> Grep::parse(const std::vector<s
     return {pattern, sub};
 }
 
-std::string Grep::read_file(const std::string& path) {
+std::vector<std::string> Grep::read_file(const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
         std::cerr << "grep: " << path << ": No such file or directory" << std::endl;
-        return "";
+        return {};
     }
-    std::stringstream buffer;
-    buffer << file.rdbuf(); //write to ss from files stream buffer
-    return buffer.str();
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    return lines;
 }
 
 

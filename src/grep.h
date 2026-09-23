@@ -8,6 +8,12 @@
 
 using FlagFunction = std::function<void(std::string&)>;
 
+struct FileLine {
+    std::string file_name;
+    std::string contet;
+};
+
+
 struct Preferences {
     bool use_extended_regex = false;
     bool print_matches_only = false;
@@ -37,7 +43,7 @@ private:
     RegexEngine engine;
     void register_functions();
     std::pair<std::string, std::vector<std::string>> parse(const std::vector<std::string>& tokens);
-    std::string read_file(const std::string& path);
+    std::vector<std::string> read_file(const std::string& path);
     void handle_regex(const std::string& pattern, const std::vector<std::string>& words);
     void handle_literal(const std::vector<std::string>& word);
     void print_helper(std::vector<Token>& tokens);
