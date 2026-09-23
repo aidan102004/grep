@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+void load_rs(std::string file_name);
 
 const std::string RED = "\033[31m";
 const std::string GREEN = "\033[32m";
@@ -43,6 +44,9 @@ void Grep::register_functions() {
     flag_map["o"] = [this](std::string& input) {
         preferences.print_matches_only = true;
     };
+    flag_map["r"] = [this](std::string& input) {
+        preferences.recursive_search = true;
+    };
     flag_map["color"] = [this](std::string& input) {
         preferences.option = input;
     };
@@ -56,6 +60,13 @@ void Grep::handle_grep(const std::vector<std::string>& tokens) {
     for (const auto& file : contents) {
         //if any of the tokens following the pattern are files we run the search on those files, not the literal text
         if (file_exists(file)) {
+            //if we are recursively searching the directory
+            if (std::filesystem::is_directory(file) && preferences.recursive_search) {
+                std::vector<FileLine> temp = load_rs(file);
+                text.insert(text.end(), temp.begin(), temp.end());
+                fn_count++;
+                continue;
+            }
             std::vector<std::string> lines = read_file(file);
             fn_count++; //how we check if there are multiple files
             for (const auto& line : lines) {
@@ -81,19 +92,43 @@ void Grep::handle_grep(const std::vector<std::string>& tokens) {
 void Grep::handle_regex(const std::string& pattern, const std::vector<FileLine>& file_lines) {
     std::vector<Token> parsed_tokens = engine.parser(pattern);
     bool multi_file = fn_count > 1; //multifile check
-
+    int matches_count = 0;
     for (const auto& fl : file_lines) {
         //return a vector of pairs of indices representing the start and end positions of a match within a string
         std::vector<std::pair<size_t, size_t>> matches = engine.match(parsed_tokens, fl.content);
         if (matches.empty()) continue; //this confirms we have matches
+        matches_count++;
         //set prefix depending if its multifile
-        std::string prefix = (multi_file && !fl.file_name.empty()) ? fl.file_name + ":" : ""; 
+        std::string fn = std::filesystem::path(fl.file_name).filename().string();
+        std::string prefix = (multi_file && !fl.file_name.empty()) ? fn + ":" : ""; 
+        if (preferences.recursive_search && !fl.file_name.empty()) prefix = fl.file_name + ":"; //sets prefix to dir if we recursively searched
 
         if (!preferences.print_matches_only)
             print_matches(fl.content, matches, should_colorise(preferences.option.c_str()), preferences.num_matches, prefix);
         else
             print_only_matches(fl.content, matches, should_colorise(preferences.option.c_str()), preferences.num_matches, prefix);
     }
+    if (matches_count == 0) {
+        std::cout << "grep: no matches found" << std::endl;
+    }
+}
+
+std::vector<FileLine> Grep::load_rs(std::string file) {
+    std::vector<FileLine> files;
+    //recursivly search directories and read files into line vector 
+    for (std::filesystem::recursive_directory_iterator it(file), end; it != end; ++it) {
+        if (!std::filesystem::is_directory(it->path())) {
+            std::ifstream file(it->path());
+            if (!file.is_open()) {
+                continue; //dont work with files that cant be opened
+            }
+            std::vector<std::string> lines = read_file(it->path().string()); //read file into lines
+            for (const auto l : lines) {
+                files.push_back({it->path().parent_path().string(), l}); //add parent path and contents to files
+            }
+        }
+    }
+    return files;
 }
 
 void Grep::handle_literal(const std::vector<std::string>& word) {

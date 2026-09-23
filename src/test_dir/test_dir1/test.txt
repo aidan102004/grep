@@ -1,0 +1,67 @@
+Customer service contact list - internal draft
+
+For general inquiries please reach out to our main office. The front desk can be reached at 555-201-4478 between 9am and 5pm on weekdays. If that line is busy, try the backup line at 555-201-4479 instead.
+
+Sarah in accounting handles billing questions. Her direct extension connects through 555-330-8821, though she often forwards calls to her mobile at 555-330-9012 when she's out of office.
+
+The IT helpdesk ticket system is mostly automated now, but for urgent outages you can still call 555-448-1102 and someone will pick up within a few rings. After hours, the on-call engineer carries 555-448-1199 for emergencies only.
+
+Marketing team requests should go through the shared inbox first, but if you need to speak with someone directly, Priya's line is 555-772-3345. Her assistant Devon can also be reached at 555-772-3346 for scheduling.
+
+Random notes below, not phone related:
+The quarterly report is due next Friday.
+We should revisit the vendor contract before it auto-renews.
+Someone left the conference room projector on again.
+
+Legal department contact: 555-990-1120. This line is only for contract review requests, not general questions. For HR-related legal matters, use 555-990-1121 and ask for the compliance officer.
+
+A few numbers were transcribed incorrectly in the old spreadsheet, so double check these against the directory: 555-004-7743, 555-004-7744, and 555-004-7745 are all valid extensions for the shipping department.
+
+Facilities maintenance requests: call 555-660-2210 for anything urgent like water leaks or power outages. Non-urgent requests like light bulb replacements can go through the online form instead, no need to call 555-660-2211 unless the form is down.
+
+Here is some filler text with no numbers at all, just to break up the pattern a bit so the matches aren't too predictable. This paragraph exists purely to add noise between the real contact numbers so searching doesn't feel too easy or too repetitive when testing.
+
+Security desk (lobby): 555-810-6600
+Security desk (parking garage): 555-810-6601
+Security supervisor mobile: 555-810-6699
+
+Vendor contacts, external:
+- Office supplies rep: 555-233-7890
+- Catering company: 555-233-7891
+- Cleaning service dispatch: 555-233-7892
+- Elevator maintenance contractor: 555-233-7893
+
+More filler paragraph here. The building was renovated last year and most departments moved floors. The new floor directory is posted near the elevators on each level, along with updated department names and shared workspace assignments.
+
+Executive assistants:
+CEO's assistant, Monique: 555-100-2001
+CFO's assistant, Daniel: 555-100-2002
+COO's assistant, Wren: 555-100-2003
+
+Old numbers that should no longer be used, kept here for historical reference only:
+555-000-1111 (disconnected in 2019)
+555-000-2222 (disconnected in 2021)
+555-000-3333 (reassigned to a different department)
+
+Regional offices:
+Northeast branch main line: 555-411-0087
+Southeast branch main line: 555-411-0088
+Midwest branch main line: 555-411-0089
+West coast branch main line: 555-411-0090
+
+A short story unrelated to phone numbers, just for length and variety in the file. Once there was a small office on the third floor where nobody remembered whose desk it originally belonged to. Plants grew undisturbed on the windowsill and a coffee mug sat there for months, slowly becoming a landmark that new employees were told about during orientation.
+
+Emergency contacts (internal only, do not share externally):
+Building emergency line: 555-999-0000
+Poison control reference desk: 555-999-0001
+After-hours security dispatch: 555-999-0002
+
+Testing edge cases below:
+A number with no dashes at all: 5559998888
+A number with dots instead of dashes: 555.777.6666
+A number in parentheses: (555) 444-3322
+A partial number that shouldn't fully match: 555-12
+Another partial: 12-3456
+Just some random digits not in phone format: 42 17 9 3021
+
+End of document. If you made it this far, the last valid number in this file is 555-321-0007, belonging to the archive room, which nobody has visited in quite some time.

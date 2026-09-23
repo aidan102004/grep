@@ -18,6 +18,7 @@ struct Preferences {
     bool use_extended_regex = false;
     bool print_matches_only = false;
     int num_matches = INT_MAX;
+    bool recursive_search = false;
     std::string option = "auto";
 
     /* we need to reset preferences after each command */
@@ -34,7 +35,7 @@ public:
     void handle_grep(const std::vector<std::string>& command);
 private:
     //preferences
-    Preferences preferences = {false, false, INT_MAX, "auto"};
+    Preferences preferences = {false, false, INT_MAX, false, "auto"};
 
     //func ptrs for flags
     std::unordered_map<std::string, FlagFunction> flag_map;
@@ -42,6 +43,7 @@ private:
     //regex engine
     RegexEngine engine;
     void register_functions();
+    std::vector<FileLine> load_rs(std::string file_name);
     std::pair<std::string, std::vector<std::string>> parse(const std::vector<std::string>& tokens);
     std::vector<std::string> read_file(const std::string& path);
     void handle_regex(const std::string& pattern, const std::vector<FileLine>& words);
