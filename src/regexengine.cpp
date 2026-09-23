@@ -75,7 +75,7 @@ std::vector<Token> RegexEngine::parser(const std::string& pattern) {
             if (end == std::string::npos) {
                 tokens.push_back({TokenType::LITERAL, std::string(1, pattern[i]), func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
             } else {
-                auto [increment, temp] = handle_inside_brackets(backreferences.size() + 1, pattern.substr(i + 1), end); //returns increment and all tokens inside brackets
+                auto [increment, temp] = handle_inside_brackets(backreferences.size() + 1, pattern.substr(i + 1), end - (i + 1)  ); //returns increment and all tokens inside brackets
                 if (!temp.empty()) {
                     tokens.insert(tokens.end(), temp.begin(), temp.end()); 
                     i += increment;
@@ -107,7 +107,7 @@ std::pair<int, std::vector<Token>> RegexEngine::handle_inside_brackets(int id, c
                 temp_tokens.push_back({TokenType::LITERAL, "(", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1});
                 i++;
             } else {
-                auto [index, temp_vector] = handle_inside_brackets(id + 1, pattern.substr(i + 1), end_bracket_pos); //recursive run same function within those brackets
+                auto [index, temp_vector] = handle_inside_brackets(id + 1, pattern.substr(i + 1), next - (i + 1)); //recursive run same function within those brackets
                 temp_tokens.insert(temp_tokens.end(), temp_vector.begin(), temp_vector.end()); //update tokens 
                 int increment = (temp_vector[0].type == TokenType::ALTERNATION) ? 0 : 1; 
                 i += index + increment; //increment by however many characters we moved over, including one in the case we alternated
@@ -146,7 +146,7 @@ std::pair<int, std::vector<Token>> RegexEngine::handle_inside_brackets(int id, c
                         token.second.alternatives.push_back(t.second);
                     }
                     temp_tokens.push_back(token.second);
-                    i = end_bracket_pos - 1;
+                    i = end_bracket_pos;
                     break;
                 } else {
                     temp_tokens.push_back(token.second);

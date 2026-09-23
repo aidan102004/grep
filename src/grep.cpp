@@ -77,51 +77,56 @@ void Grep::handle_literal(const std::string& word) {
 std::pair<std::string, std::string> Grep::parse(const std::vector<std::string>& tokens) {
     if (tokens.size() < 2) return {"", ""};  //saftey check
     
-    std::vector<std::string> flags;
+    size_t index = 1; //and increment to keep track of our position in tokens
+    std::string input = "";
     std::string pattern;
-    std::string input = ""; //this will hold the arg to be passed to func ptrs
-    int index = 1; //this is incremented to hold the index of the pattern and word within tokens
+    bool num_required = false; //switched if -m
+    std::vector<std::string> flags;
     
-    //handle flags
-    if (index < tokens.size() && tokens[index][0] == '-') { 
-        if (tokens[index].size() > 1 && tokens[index][1] == '-') { //the case we have -- meaning --color
+    //search through token by token so we handle cases with combined flags and seperate flags
+    while (index < tokens.size() && tokens[index][0] == '-') {
+        if (tokens[index].size() > 1 && tokens[index][1] == '-') { //handle --color case
             size_t pos = tokens[index].find('=');
             if (pos != std::string::npos) {
                 input = tokens[index].substr(pos + 1); 
                 flags.push_back(tokens[index].substr(2, pos - 2)); 
             }
         } else {
-            //add all flags to vector
+            //add all characters to flag vector to be handled
             for (const auto& c : tokens[index].substr(1)) {
-                //handle m flag differently as this will mean there is one more token to hold number of matches 
-                if (c == 'm') {
-                    index++;
-                    if (index < tokens.size()) { 
-                        input = tokens[index];
-                    }
-                }
-                flags.push_back(std::string(1, c)); 
-            }
-        }
-        //loop through vector and run their respective func ptrs
-        for (const auto& f : flags) {
-            auto it = flag_map.find(f);
-            if (it != flag_map.end()) {
-                it->second(input);
+                if (c == 'm') num_required = true;
+                flags.push_back(std::string(1, c));
             }
         }
         index++;
     }
-    if (index < tokens.size()) {  
-        pattern = tokens[index]; //index will always be the patterns 
-        index++; //increment it so we can access the following word, which is our word
+    if (num_required) {
+        if (index < tokens.size()) {   
+            input = tokens[index];
+            index++; //increment one more as we consumed it                   
+        }
     }
+    //for each flag run its respective func ptr to set preferences
+    for (const auto& f : flags) {
+        auto it = flag_map.find(f);
+        if (it != flag_map.end()) {
+            it->second(input); //func runs here
+        }
+    }
+    //need to do some check for files here
+    
+    if (index < tokens.size()) {  
+        pattern = tokens[index]; //set pattern
+        index++;
+    }
+    //combine all trailing tokens into a final string
     std::string final;
     for (size_t i = index; i < tokens.size(); i++) {
-        final += tokens[i] + " "; //this appends all following tokens into one word so we can search for spaces and such
+        final += tokens[i] + " ";
     }
     return {pattern, final};
 }
+
 
 /*checks whether we should apply colour to the output*/
 bool Grep::should_colorise(const char* option) {
