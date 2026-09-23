@@ -51,13 +51,16 @@ void Grep::register_functions() {
 void Grep::handle_grep(const std::vector<std::string>& tokens) {
     
     auto [pattern, contents] = parse(tokens); //returns both the pattern and the word
-    std::vector<std::string> text;
+    std::vector<FileLine> text;
     //filename and file contents
     for (const auto& file : contents) {
         //if any of the tokens following the pattern are files we run the search on those files, not the literal text
         if (file_exists(file)) {
             std::vector<std::string> lines = read_file(file);
-            text.insert(text.end(), lines.begin(), lines.end());
+            fn_count++; //how we check if there are multiple files
+            for (const auto& line : lines) {
+                text.push_back({file, line});
+            }
         }
     }
     if (text.empty()) {
@@ -65,25 +68,31 @@ void Grep::handle_grep(const std::vector<std::string>& tokens) {
         for (const auto& w : contents) {
             joined += w + " ";
         }
-        text.push_back(joined);
+        text.push_back({"", joined});
     }
     if (preferences.use_extended_regex) { 
         handle_regex(pattern, text); //hanlde regex
     } else {
-        handle_literal(text); //handle normal string search
+        //handle_literal(text); //handle normal string search
     }
     preferences.reset(); //reset modifications done by flags everytime
 }
 
-void Grep::handle_regex(const std::string& pattern, const std::vector<std::string>& words) {
+void Grep::handle_regex(const std::string& pattern, const std::vector<FileLine>& file_lines) {
     std::vector<Token> parsed_tokens = engine.parser(pattern);
-    for (const auto& word : words) {
-        std::vector<std::pair<size_t, size_t>> matches = engine.match(parsed_tokens, word);
-        if (matches.empty()) continue;  //skip non-matching lines entirely
+    bool multi_file = fn_count > 1; //multifile check
+
+    for (const auto& fl : file_lines) {
+        //return a vector of pairs of indices representing the start and end positions of a match within a string
+        std::vector<std::pair<size_t, size_t>> matches = engine.match(parsed_tokens, fl.content);
+        if (matches.empty()) continue; //this confirms we have matches
+        //set prefix depending if its multifile
+        std::string prefix = (multi_file && !fl.file_name.empty()) ? fl.file_name + ":" : ""; 
+
         if (!preferences.print_matches_only)
-            print_matches(word, matches, should_colorise(preferences.option.c_str()), preferences.num_matches);
+            print_matches(fl.content, matches, should_colorise(preferences.option.c_str()), preferences.num_matches, prefix);
         else
-            print_only_matches(word, matches, should_colorise(preferences.option.c_str()), preferences.num_matches);
+            print_only_matches(fl.content, matches, should_colorise(preferences.option.c_str()), preferences.num_matches, prefix);
     }
 }
 
@@ -139,6 +148,7 @@ std::pair<std::string, std::vector<std::string>> Grep::parse(const std::vector<s
     return {pattern, sub};
 }
 
+/*read file contents line by line*/
 std::vector<std::string> Grep::read_file(const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
@@ -182,8 +192,8 @@ std::string tokenTypeToString(TokenType type) {
 }
 
 /*print matches within string*/
-void Grep::print_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count) {
-    std::string final;
+void Grep::print_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count, const std::string& prefix) {
+    std::string final = prefix;
     size_t i = 0;
     for (const auto& [start, end] : indicies) {
         if (count == 0) break;
@@ -198,7 +208,7 @@ void Grep::print_matches(const std::string& word, const std::vector<std::pair<si
 }
 
 /*print only matches*/
-void Grep::print_only_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count) {
+void Grep::print_only_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count, const std::string& prefix) {
     for (const auto& [start, end] : indicies) {
         if (count == 0) break;
         std::string modified_text = (coloured) ? colorise(word.substr(start, end - start), BOLD_RED) : word.substr(start, end - start);
