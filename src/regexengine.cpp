@@ -193,7 +193,7 @@ std::pair<int, Token> RegexEngine::deduce_type(const std::string& pattern, std::
             }
         } else if (c == '{') { //handle exactly, at least and between quantifiers
             size_t end = pattern.find('}', i + 1); //check for closing bracket from the following pos
-            if (end == std::string::npos) {
+            if (end == std::string::npos || temp_tokens.empty()) {
                 return {i,{TokenType::LITERAL, "{", func_register[static_cast<int>(TokenType::LITERAL)], 1, 1}}; //if we cannot find it then push the { as a literal
             } else {
                 if (end-i == 2) { // {n} case

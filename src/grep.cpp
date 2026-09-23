@@ -5,6 +5,9 @@
 #include <string>
 #include <cstring>
 #include <unistd.h>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 
 const std::string RED = "\033[31m";
 const std::string GREEN = "\033[32m";
@@ -47,39 +50,54 @@ void Grep::register_functions() {
 
 void Grep::handle_grep(const std::vector<std::string>& tokens) {
     
-    auto [pattern, word] = parse(tokens); //returns both the pattern and the word
+    auto [pattern, contents] = parse(tokens); //returns both the pattern and the word
+    std::vector<std::string> text;
+    //filename and file contents
+    for (const auto& file : contents) {
+        //if any of the tokens following the pattern are files we run the search on those files, not the literal text
+        if (file_exists(file)) {
+            file_names.push_back(file);
+            text.push_back(read_file(file));
+        }
+    }
+    if (text.empty()) {
+        std::string joined;
+        for (const auto& w : contents) {
+            joined += w + " ";
+        }
+        text.push_back(joined);
+    }
     if (preferences.use_extended_regex) { 
-        handle_regex(pattern, word); //hanlde regex
+        handle_regex(pattern, text); //hanlde regex
     } else {
-        handle_literal(word); //handle normal string search
+        handle_literal(text); //handle normal string search
     }
     preferences.reset(); //reset modifications done by flags everytime
 }
 
-void Grep::handle_regex(const std::string& pattern, const std::string& word) {
-    std::vector<Token> parsed_tokens = engine.parser(pattern); 
-    //begins recursive search and returns a vector of index pairs representing the start and end of each match
-    std::vector<std::pair<size_t, size_t>> matches_pair = engine.match(parsed_tokens, word); 
-    if (matches_pair.empty()) return;
-    if (!preferences.print_matches_only) 
-        //print matches within entire word (highlighted)
-        print_matches(word, matches_pair, should_colorise(preferences.option.c_str()), preferences.num_matches);
-    else
-        //print only matches on new lines
-        print_only_matches(word, matches_pair, should_colorise(preferences.option.c_str()), preferences.num_matches);
-    return;
+void Grep::handle_regex(const std::string& pattern, const std::vector<std::string>& words) {
+    std::vector<Token> parsed_tokens = engine.parser(pattern);
+    for (const auto& word : words) {
+        std::vector<std::pair<size_t, size_t>> matches = engine.match(parsed_tokens, word);
+        if (matches.empty()) continue;
+        if (!preferences.print_matches_only)
+            print_matches(word, matches, should_colorise(preferences.option.c_str()), preferences.num_matches);
+        else
+            print_only_matches(word, matches, should_colorise(preferences.option.c_str()), preferences.num_matches);
+    }
 }
 
-void Grep::handle_literal(const std::string& word) {
+void Grep::handle_literal(const std::vector<std::string>& word) {
     //todo, implement literal search
 }
 
-std::pair<std::string, std::string> Grep::parse(const std::vector<std::string>& tokens) {
-    if (tokens.size() < 2) return {"", ""};  //saftey check
+std::pair<std::string, std::vector<std::string>> Grep::parse(const std::vector<std::string>& tokens) {
+    if (tokens.size() < 2) return {"", {}};  //saftey check
     
     size_t index = 1; //and increment to keep track of our position in tokens
     std::string input = "";
     std::string pattern;
+    std::string final;
     bool num_required = false; //switched if -m
     std::vector<std::string> flags;
     
@@ -113,18 +131,23 @@ std::pair<std::string, std::string> Grep::parse(const std::vector<std::string>& 
             it->second(input); //func runs here
         }
     }
-    //need to do some check for files here
-    
     if (index < tokens.size()) {  
         pattern = tokens[index]; //set pattern
         index++;
     }
-    //combine all trailing tokens into a final string
-    std::string final;
-    for (size_t i = index; i < tokens.size(); i++) {
-        final += tokens[i] + " ";
+    std::vector<std::string> sub(tokens.begin() + index, tokens.end());
+    return {pattern, sub};
+}
+
+std::string Grep::read_file(const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        std::cerr << "grep: " << path << ": No such file or directory" << std::endl;
+        return "";
     }
-    return {pattern, final};
+    std::stringstream buffer;
+    buffer << file.rdbuf(); //write to ss from files stream buffer
+    return buffer.str();
 }
 
 

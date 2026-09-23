@@ -3,6 +3,8 @@
 #include <iostream>
 #include <functional>
 #include "regexengine.h"
+#include <sys/stat.h>
+#include <unistd.h>
 
 using FlagFunction = std::function<void(std::string&)>;
 
@@ -30,15 +32,21 @@ private:
 
     //func ptrs for flags
     std::unordered_map<std::string, FlagFunction> flag_map;
+    std::vector<std::string> file_names;
     //regex engine
     RegexEngine engine;
     void register_functions();
-    std::pair<std::string, std::string> parse(const std::vector<std::string>& tokens);
-    void handle_regex(const std::string& pattern, const std::string& word);
-    void handle_literal(const std::string& word);
+    std::pair<std::string, std::vector<std::string>> parse(const std::vector<std::string>& tokens);
+    std::string read_file(const std::string& path);
+    void handle_regex(const std::string& pattern, const std::vector<std::string>& words);
+    void handle_literal(const std::vector<std::string>& word);
     void print_helper(std::vector<Token>& tokens);
     void print_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count);
     void print_only_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count);
     std::string colorise(const std::string& text, const std::string& color);
     bool should_colorise(const char* option);
+    inline bool file_exists (const std::string& name) {
+        struct stat buffer;   
+        return (stat (name.c_str(), &buffer) == 0); 
+    }
 };
