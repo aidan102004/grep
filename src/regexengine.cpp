@@ -2,7 +2,6 @@
 #include <string>
 #include <cctype>
 #include <iostream>
-#include <stack>
 
 RegexEngine::RegexEngine(){
     register_functions();
@@ -217,9 +216,10 @@ std::pair<int, Token> RegexEngine::deduce_type(const std::string& pattern, std::
     }
 
 
-std::vector<std::pair<size_t, size_t>> RegexEngine::match(const std::vector<Token>& input_tokens, const std::string& word) {
+std::vector<std::pair<size_t, size_t>> RegexEngine::match(const std::vector<Token>& input_tokens, const std::string& word, bool is_case_sensitive) {
     memo.clear();   
     tokens = input_tokens; 
+    case_sensitive = is_case_sensitive;
     std::vector<std::pair<size_t, size_t>> res; //setup container to store index pairs
     for (size_t s = 0; s < word.size(); s++) { //increment through the whole piece of text starting searching at every letter
         auto [end_index, matched] = try_match(word, s, 0); //in the case we successfuly find a match we insert it and increment s
@@ -309,7 +309,13 @@ void RegexEngine::handle_backreferences(std::vector<Token>& tokens, char c) {
 }
 
 bool RegexEngine::literal(const std::string& input, size_t& pos, const Token& token) {
-    if (pos < input.size() && input[pos] == token.value[0]) {
+    if (pos >= input.size()) return false;
+
+    bool match = case_sensitive 
+        ? input[pos] == token.value[0]
+        : tolower(input[pos]) == tolower(token.value[0]);
+    
+    if (match) {
         pos++;
         return true;
     }
@@ -365,7 +371,19 @@ bool RegexEngine::notspace(const std::string& input, size_t& pos, const Token& t
 }
 
 bool RegexEngine::char_group(const std::string& input, size_t& pos, const Token& token) {
-    if (pos < input.size() && token.value.find(input[pos]) != std::string::npos) {
+    if (pos >= input.size()) return false;
+    
+    bool found = false;
+    
+    if (case_sensitive) {
+        found = (token.value.find(input[pos]) != std::string::npos);
+    } else {
+        std::string token_lower = token.value;
+        transform(token_lower.begin(), token_lower.end(), token_lower.begin(), ::tolower);
+        found = (token_lower.find(tolower(input[pos])) != std::string::npos);
+    }
+    
+    if (found) {
         pos++;
         return true;
     }
@@ -373,7 +391,19 @@ bool RegexEngine::char_group(const std::string& input, size_t& pos, const Token&
 }
 
 bool RegexEngine::negated_group(const std::string& input, size_t& pos, const Token& token) {
-    if (pos < input.size() && token.value.find(input[pos]) == std::string::npos) {
+    if (pos >= input.size()) return false;
+    
+    bool found = false;
+    
+    if (case_sensitive) {
+        found = (token.value.find(input[pos]) != std::string::npos);
+    } else {
+        std::string token_lower = token.value;
+        transform(token_lower.begin(), token_lower.end(), token_lower.begin(), ::tolower);
+        found = (token_lower.find(tolower(input[pos])) != std::string::npos);
+    }
+    
+    if (!found) {  
         pos++;
         return true;
     }
@@ -407,6 +437,3 @@ bool RegexEngine::alternation(const std::string& input, size_t& pos, const Token
     return false;
 }
 
-std::map<int, std::vector<Token>>& RegexEngine::get_saved() {
-    return backreferences;
-}

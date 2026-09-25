@@ -8,6 +8,9 @@
 
 using FlagFunction = std::function<void(std::string&)>;
 
+
+const std::string RESET = "\033[0m";
+
 struct FileLine {
     std::string file_name;
     std::string content;
@@ -22,7 +25,9 @@ struct Preferences {
     bool recursive_search = false;
     bool print_count = false;
     bool display_line_nums = false;
+    bool case_insensitive = false;
     std::string option = "auto";
+    std::string COLOR = "\033[1;31m";
 
     /* we need to reset preferences after each command */
     void reset() {
@@ -30,6 +35,7 @@ struct Preferences {
         print_matches_only = false;
         print_count = false;
         display_line_nums = false;
+        case_insensitive = false;
         num_matches = INT_MAX;
     }
 };
@@ -40,7 +46,7 @@ public:
     void handle_grep(const std::vector<std::string>& command);
 private:
     //preferences
-    Preferences preferences = {false, false, INT_MAX, false, false, false, "auto"};
+    Preferences preferences = {false, false, INT_MAX, false, false, false, false, "auto"};
 
     //func ptrs for flags
     std::unordered_map<std::string, FlagFunction> flag_map;
@@ -57,7 +63,10 @@ private:
     void print_only_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count, const std::string& prefix);
     std::string colorise(const std::string& text, const std::string& color);
     bool should_colorise(const char* option);
+    std::string get_escape_code(const std::string& input);
     std::vector<std::pair<size_t, size_t>> boyer_moore(const std::string& text, const std::string& pattern);
+    void display_help_popup();
+    std::string get_help_text();
     /*checks if this string is actually also a file*/
     inline bool file_exists (const std::string& name) {
         struct stat buffer;   

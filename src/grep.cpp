@@ -9,16 +9,8 @@
 #include <fstream>
 #include <sstream>
 
-const int ALPHABET_SIZE = 256;
+constexpr int ALPHABET_SIZE = 256;
 
-const std::string RED = "\033[31m";
-const std::string GREEN = "\033[32m";
-const std::string YELLOW = "\033[33m";
-const std::string BLUE = "\033[34m";
-const std::string BOLD = "\033[1m";
-const std::string BOLD_RED = "\033[1;31m";
-const std::string BOLD_GREEN = "\033[1;32m";
-const std::string RESET = "\033[0m";
 
 Grep::Grep() {
     register_functions();
@@ -54,14 +46,24 @@ void Grep::register_functions() {
     flag_map["n"] = [this](std::string& input) {
         preferences.display_line_nums = true;
     };
+    flag_map["i"] = [this](std::string& input) {
+        preferences.case_insensitive = true;
+    };
     flag_map["color"] = [this](std::string& input) {
         preferences.option = input;
+    };
+    flag_map["setcolor"] = [this](std::string& input) {
+        preferences.COLOR = get_escape_code(input);
+    };
+    flag_map["h"] = [this](std::string& input) {
+        display_help_popup();
     };
 }
 
 void Grep::handle_grep(const std::vector<std::string>& tokens) {
     
     auto [pattern, contents] = parse(tokens); //returns both the pattern and the word
+    if (pattern == "") return;
     std::vector<FileLine> text;
     //filename and file contents
     for (const auto& file : contents) {
@@ -100,7 +102,7 @@ void Grep::handle_pattern(const std::string& pattern, const std::vector<FileLine
     int matches_count = 0;
     for (const auto& fl : file_lines) {
         //return a vector of pairs of indices representing the start and end positions of a match within a string
-        auto matches = (preferences.use_extended_regex) ? engine.match(parsed_tokens, fl.content) : boyer_moore(fl.content, pattern); //check whether to use regex or not
+        auto matches = (preferences.use_extended_regex) ? engine.match(parsed_tokens, fl.content, !preferences.case_insensitive) : boyer_moore(fl.content, pattern); //check whether to use regex or not
         if (matches.empty()) continue; //this confirms we have matches
         matches_count += matches.size();
         //set prefix depending if its multifile
@@ -213,25 +215,6 @@ bool Grep::should_colorise(const char* option) {
     return isatty(STDOUT_FILENO); 
 }
 
-/*helper for printing tokens so i can debug*/
-std::string tokenTypeToString(TokenType type) {
-    switch (type) {
-        case TokenType::LITERAL: return "LITERAL";
-        case TokenType::DIGIT: return "DIGIT";
-        case TokenType::WORD: return "WORD";
-        case TokenType::NOT_WORD: return "NOT_WORD";
-        case TokenType::NOT_DIGIT: return "NOT_DIGIT";
-        case TokenType::SPACE: return "SPACE";
-        case TokenType::NOT_SPACE: return "NOT_SPACE";
-        case TokenType::CHAR_GROUP: return "CHAR_GROUP";
-        case TokenType::NEGATED_GROUP: return "NEGATED_GROUP";
-        case TokenType::ANCHOR_START: return "ANCHOR_START";
-        case TokenType::ANCHOR_END: return "ANCHOR_END";
-        case TokenType::WILD_CARD: return "WILDCARD";
-        case TokenType::ALTERNATION: return "ALTERNATION";
-        default: return "UNKNOWN";
-    }
-}
 
 /*print matches within string*/
 void Grep::print_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count, const std::string& prefix) {
@@ -240,7 +223,7 @@ void Grep::print_matches(const std::string& word, const std::vector<std::pair<si
     for (const auto& [start, end] : indicies) {
         if (count == 0) break;
         final += word.substr(i, start - i);
-        std::string modified_text = (coloured) ? colorise(word.substr(start, end - start), BOLD_RED) : word.substr(start, end - start);
+        std::string modified_text = (coloured) ? colorise(word.substr(start, end - start), preferences.COLOR) : word.substr(start, end - start);
         final += modified_text;
         i = end;
         count--;
@@ -253,18 +236,12 @@ void Grep::print_matches(const std::string& word, const std::vector<std::pair<si
 void Grep::print_only_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count, const std::string& prefix) {
     for (const auto& [start, end] : indicies) {
         if (count == 0) break;
-        std::string modified_text = (coloured) ? colorise(word.substr(start, end - start), BOLD_RED) : word.substr(start, end - start);
+        std::string modified_text = (coloured) ? colorise(word.substr(start, end - start), preferences.COLOR) : word.substr(start, end - start);
         std::cout << modified_text << std::endl;
         count--;
     }
 }
 
-/*helper for printing tokens so i can debug*/
-void Grep::print_helper(std::vector<Token>& tokens) {
-    for (const auto& t : tokens) {
-        std::cout << tokenTypeToString(t.type) << " : " << t.value << " min-rep: " << t.min_rep << " | max-rep: " << t.max_rep << std::endl;
-    }
-}
 
 std::string Grep::colorise(const std::string& text, const std::string& color) {
     return color + text + RESET;
@@ -328,23 +305,93 @@ std::vector<std::pair<size_t, size_t>> Grep::boyer_moore(const std::string& text
         int j = m - 1;
         
         //compare the pattern from the end
-        while (j >= 0 && pattern[j] == text[s + j]) {
-            j--;
+        while (j >= 0) {
+            bool match = false;
+            if (preferences.case_insensitive) {
+                match = (tolower(pattern[j]) == tolower(text[s + j]));
+            } else {
+                match = (pattern[j] == text[s + j]);
+            }
+            if (match) {
+                j--;
+            } else {
+                break;
+            }
         }
         
         if (j < 0) {
-            //pattern found at position s
+            //pattern found
             matches.push_back({s, s + m});
             s += (s + m < n) ? m - goodSuffix[1] : 1;
         } else {
-            // mismatch occurred at position j
-            int badCharShift = j - badChar[(int)text[s + j]];
+            //mismatch at position j
+            char mismatchChar = text[s + j];
+            if (preferences.case_insensitive) {
+                mismatchChar = tolower(mismatchChar);
+            }
+            
+            int badCharShift = j - badChar[(int)mismatchChar];
             int goodSuffixShift = (j < m - 1) ? goodSuffix[j + 1] : 1;
             
-            // take the maximum shift
             s += std::max(badCharShift, goodSuffixShift);
         }
     }
     
     return matches;
+}
+
+/*helper for getting escape codes for colors*/
+std::string Grep::get_escape_code(const std::string& input) {
+    if (input == "RED") return "\033[31m";
+    else if (input == "GREEN") return "\033[32m";
+    else if (input == "YELLOW") return "\033[33m";
+    else if (input == "BLUE") return "\033[34m";
+    else if (input == "BOLD") return "\033[1m";
+    else if (input == "BOLD_RED") return "\033[1;31m";
+    else if (input == "BOLD_GREEN") return "\033[1;32m";
+    else return "UNKNOWN";
+}
+
+/*displays help text*/
+void Grep::display_help_popup() {
+    std::cout << get_help_text() << std::endl;
+}
+
+std::string Grep::get_help_text() {
+    return R"(
+Usage: grepmini 
+ 
+DESCRIPTION
+  Search for PATTERN in files or standard input. Supports regex patterns and 
+  literal string matching.
+ 
+OPTIONS
+  -i, Ignore case distinctions in patterns and data
+  -c, Only print count of matching lines
+  -n, Print line numbers with matching lines
+  -o, Print only matches
+  -r, Recursively search directories
+  -h, Display this help message
+  --color, Set color highlight options
+  --setcolor, Set color 
+ 
+COLOR OPTIONS
+  --color=WHEN            Control when to colorize output
+                          WHEN can be:
+                            auto    - Colorize if output is terminal (default)
+                            always  - Always colorize output
+                            never   - Never colorize output
+ 
+  --setcolor=COLOR     Set color for matched patterns
+                          COLOR can be:
+                            RED           - Red text
+                            GREEN         - Green text
+                            YELLOW        - Yellow text
+                            BLUE          - Blue text
+                            BOLD          - Bold text
+                            BOLD_RED      - Bold red text
+                            BOLD_GREEN    - Bold green text
+ 
+
+)";
 }

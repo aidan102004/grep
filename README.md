@@ -13,8 +13,8 @@ A lightweight implementation of `grep` — a command-line utility for searching 
 - Recursive directory search (`-r`)
 - Count matches instead of printing them (`-c`)
 - Display line numbers with matches (`-n`)
-- Color output for matched patterns (`--color`)
-- Support for multiple files
-
-## To implement
 - Case-insensitive matching (`-i`)
+- Color output for matched patterns (`--color`)
+- Custom color support (`--setcolor`)
+- Help flag (`-h`)
+- Support for multiple files

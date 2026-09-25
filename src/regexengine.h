@@ -35,11 +35,9 @@ class RegexEngine {
 public:
     RegexEngine();
     std::vector<Token> parser(const std::string& pattern);
-    std::vector<std::pair<size_t, size_t>> match(const std::vector<Token>& input_tokens, const std::string& word);
+    std::vector<std::pair<size_t, size_t>> match(const std::vector<Token>& input_tokens, const std::string& word, bool is_case_sensitive);
     std::pair<int, Token> deduce_type(const std::string& pattern, std::vector<Token>& temp_tokens);
     std::pair<int, std::vector<Token>> handle_inside_brackets(int id, const std::string& pattern, size_t end_bracket_pos);
-     //temp helper for debugging
-    std::map<int, std::vector<Token>>& get_saved();
 
 private:
     //member variables
@@ -47,6 +45,7 @@ private:
     std::map<std::pair<size_t, size_t>, std::pair<size_t, bool>> memo;
     std::unordered_map<int, std::function<bool(const std::string&, size_t&, const Token&)>> func_register;
     std::map<int, std::vector<Token>> backreferences;
+    bool case_sensitive = false;
 
     void register_functions();
     Token handle_escape(char c);
