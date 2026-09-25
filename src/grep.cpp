@@ -51,6 +51,9 @@ void Grep::register_functions() {
     flag_map["c"] = [this](std::string& input) {
         preferences.print_count = true;
     };
+    flag_map["n"] = [this](std::string& input) {
+        preferences.display_line_nums = true;
+    };
     flag_map["color"] = [this](std::string& input) {
         preferences.option = input;
     };
@@ -73,8 +76,10 @@ void Grep::handle_grep(const std::vector<std::string>& tokens) {
             }
             std::vector<std::string> lines = read_file(file);
             fn_count++; //how we check if there are multiple files
+            int line_index = 0;
             for (const auto& line : lines) {
-                text.push_back({file, line});
+                text.push_back({file, line, line_index});
+                line_index++;
             }
         }
     }
@@ -100,8 +105,9 @@ void Grep::handle_pattern(const std::string& pattern, const std::vector<FileLine
         matches_count += matches.size();
         //set prefix depending if its multifile
         std::string fn = std::filesystem::path(fl.file_name).filename().string();
-        std::string prefix = (multi_file && !fl.file_name.empty()) ? fn + ":" : ""; 
-        if (preferences.recursive_search && !fl.file_name.empty()) prefix = fl.file_name + ":"; //sets prefix to dir if we recursively searched
+        std::string prefix = (preferences.display_line_nums) ? std::to_string(fl.line_num) + ". " : "";
+        prefix += (multi_file && !fl.file_name.empty()) ? fn + ":" : ""; 
+        if (preferences.recursive_search && !fl.file_name.empty()) prefix = (preferences.display_line_nums) ? std::to_string(fl.line_num) + ". " + fl.file_name + ":" : fl.file_name + ":"; //sets prefix to dir if we recursively searched
 
         if (preferences.print_count) 
             continue;
@@ -126,8 +132,10 @@ std::vector<FileLine> Grep::load_rs(std::string file) {
                 continue; //dont work with files that cant be opened
             }
             std::vector<std::string> lines = read_file(it->path().string()); //read file into lines
+            int line_index = 0;
             for (const auto l : lines) {
-                files.push_back({it->path().parent_path().string(), l}); //add parent path and contents to files
+                files.push_back({it->path().parent_path().string(), l, line_index}); //add parent path and contents to files
+                line_index++;
             }
         }
     }
