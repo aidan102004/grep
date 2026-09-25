@@ -48,6 +48,9 @@ void Grep::register_functions() {
     flag_map["r"] = [this](std::string& input) {
         preferences.recursive_search = true;
     };
+    flag_map["c"] = [this](std::string& input) {
+        preferences.print_count = true;
+    };
     flag_map["color"] = [this](std::string& input) {
         preferences.option = input;
     };
@@ -94,17 +97,20 @@ void Grep::handle_pattern(const std::string& pattern, const std::vector<FileLine
         //return a vector of pairs of indices representing the start and end positions of a match within a string
         auto matches = (preferences.use_extended_regex) ? engine.match(parsed_tokens, fl.content) : boyer_moore(fl.content, pattern); //check whether to use regex or not
         if (matches.empty()) continue; //this confirms we have matches
-        matches_count++;
+        matches_count += matches.size();
         //set prefix depending if its multifile
         std::string fn = std::filesystem::path(fl.file_name).filename().string();
         std::string prefix = (multi_file && !fl.file_name.empty()) ? fn + ":" : ""; 
         if (preferences.recursive_search && !fl.file_name.empty()) prefix = fl.file_name + ":"; //sets prefix to dir if we recursively searched
 
-        if (!preferences.print_matches_only)
+        if (preferences.print_count) 
+            continue;
+        else if (!preferences.print_matches_only)
             print_matches(fl.content, matches, should_colorise(preferences.option.c_str()), preferences.num_matches, prefix);
         else
             print_only_matches(fl.content, matches, should_colorise(preferences.option.c_str()), preferences.num_matches, prefix);
     }
+    if (preferences.print_count) std::cout << matches_count << std::endl;
     if (matches_count == 0) {
         std::cout << "grep: no matches found" << std::endl;
     }

@@ -11,10 +11,10 @@ A lightweight implementation of `grep` — a command-line utility for searching 
 - Only matches (`-o`)
 - Recursive searching (`-r`)
 - Recursive directory search (`-r`)
+- Count matches instead of printing them (`-c`)
 - Color output for matched patterns (`--color`)
 - Support for multiple files
 
 ## To implement
 - Case-insensitive matching (`-i`)
-- Count matches instead of printing them (`-c`)
 - Display line numbers with matches (`-n`)

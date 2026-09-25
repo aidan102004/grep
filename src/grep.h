@@ -19,12 +19,14 @@ struct Preferences {
     bool print_matches_only = false;
     int num_matches = INT_MAX;
     bool recursive_search = false;
+    bool print_count = false;
     std::string option = "auto";
 
     /* we need to reset preferences after each command */
     void reset() {
         use_extended_regex = false;
         print_matches_only = false;
+        print_count = false;
         num_matches = INT_MAX;
     }
 };
@@ -35,7 +37,7 @@ public:
     void handle_grep(const std::vector<std::string>& command);
 private:
     //preferences
-    Preferences preferences = {false, false, INT_MAX, false, "auto"};
+    Preferences preferences = {false, false, INT_MAX, false, false, "auto"};
 
     //func ptrs for flags
     std::unordered_map<std::string, FlagFunction> flag_map;
