@@ -46,13 +46,13 @@ private:
     std::vector<FileLine> load_rs(std::string file_name);
     std::pair<std::string, std::vector<std::string>> parse(const std::vector<std::string>& tokens);
     std::vector<std::string> read_file(const std::string& path);
-    void handle_regex(const std::string& pattern, const std::vector<FileLine>& words);
-    void handle_literal(const std::vector<std::string>& word);
+    void handle_pattern(const std::string& pattern, const std::vector<FileLine>& words);
     void print_helper(std::vector<Token>& tokens);
     void print_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count, const std::string& prefix);
     void print_only_matches(const std::string& word, const std::vector<std::pair<size_t, size_t>>& indicies, bool coloured, int count, const std::string& prefix);
     std::string colorise(const std::string& text, const std::string& color);
     bool should_colorise(const char* option);
+    std::vector<std::pair<size_t, size_t>> boyer_moore(const std::string& text, const std::string& pattern);
     /*checks if this string is actually also a file*/
     inline bool file_exists (const std::string& name) {
         struct stat buffer;   

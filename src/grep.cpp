@@ -8,7 +8,8 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
-void load_rs(std::string file_name);
+
+const int ALPHABET_SIZE = 256;
 
 const std::string RED = "\033[31m";
 const std::string GREEN = "\033[32m";
@@ -81,21 +82,17 @@ void Grep::handle_grep(const std::vector<std::string>& tokens) {
         }
         text.push_back({"", joined});
     }
-    if (preferences.use_extended_regex) { 
-        handle_regex(pattern, text); //hanlde regex
-    } else {
-        //handle_literal(text); //handle normal string search
-    }
+    handle_pattern(pattern, text); //hanlde pattern
     preferences.reset(); //reset modifications done by flags everytime
 }
 
-void Grep::handle_regex(const std::string& pattern, const std::vector<FileLine>& file_lines) {
+void Grep::handle_pattern(const std::string& pattern, const std::vector<FileLine>& file_lines) {
     std::vector<Token> parsed_tokens = engine.parser(pattern);
     bool multi_file = fn_count > 1; //multifile check
     int matches_count = 0;
     for (const auto& fl : file_lines) {
         //return a vector of pairs of indices representing the start and end positions of a match within a string
-        std::vector<std::pair<size_t, size_t>> matches = engine.match(parsed_tokens, fl.content);
+        auto matches = (preferences.use_extended_regex) ? engine.match(parsed_tokens, fl.content) : boyer_moore(fl.content, pattern); //check whether to use regex or not
         if (matches.empty()) continue; //this confirms we have matches
         matches_count++;
         //set prefix depending if its multifile
@@ -129,10 +126,6 @@ std::vector<FileLine> Grep::load_rs(std::string file) {
         }
     }
     return files;
-}
-
-void Grep::handle_literal(const std::vector<std::string>& word) {
-    //todo, implement literal search
 }
 
 std::pair<std::string, std::vector<std::string>> Grep::parse(const std::vector<std::string>& tokens) {
@@ -261,4 +254,83 @@ void Grep::print_helper(std::vector<Token>& tokens) {
 
 std::string Grep::colorise(const std::string& text, const std::string& color) {
     return color + text + RESET;
+}
+
+ 
+void build_badchar_table(const std::string& pattern, int badChar[ALPHABET_SIZE]) {
+    //initialise all occurrences as -1
+    std::fill(badChar, badChar + ALPHABET_SIZE, -1);
+    
+    //fill the actual value of last occurrence of characters
+    for (int i = 0; i < (int)pattern.length(); i++) {
+        badChar[(int)pattern[i]] = i;
+    }
+}
+ 
+void build_goodsuffix_table(const std::string& pattern, std::vector<int>& goodSuffix) {
+    int m = pattern.length();
+    std::vector<int> z(m);
+    
+    int l = 0, r = 0;
+    for (int i = 1; i < m; i++) {
+        if (i > r) {
+            l = r = i;
+            while (r < m && pattern[r - l] == pattern[r]) r++;
+            goodSuffix[i] = r - l;
+            r--;
+        } else {
+            int k = i - l;
+            if (goodSuffix[k] < r - i + 1) {
+                goodSuffix[i] = goodSuffix[k];
+            } else {
+                l = i;
+                while (l >= 0 && pattern[l] == pattern[m - 1 - (i - l)]) l--;
+                goodSuffix[i] = i - l;
+            }
+        }
+    }
+}
+ 
+//boyer-Moore algorithm that finds all occurrences
+std::vector<std::pair<size_t, size_t>> Grep::boyer_moore(const std::string& text, const std::string& pattern) {
+    std::vector<std::pair<size_t, size_t>> matches;
+    
+    if (pattern.empty() || text.length() < pattern.length()) {
+        return matches;
+    }
+    
+    int n = text.length();
+    int m = pattern.length();
+    
+    int badChar[ALPHABET_SIZE];
+    std::vector<int> goodSuffix(m);
+    
+    build_badchar_table(pattern, badChar);
+    build_goodsuffix_table(pattern, goodSuffix);
+    
+    int s = 0; //s is the shift of the pattern with respect to text
+    
+    while (s <= n - m) {
+        int j = m - 1;
+        
+        //compare the pattern from the end
+        while (j >= 0 && pattern[j] == text[s + j]) {
+            j--;
+        }
+        
+        if (j < 0) {
+            //pattern found at position s
+            matches.push_back({s, s + m});
+            s += (s + m < n) ? m - goodSuffix[1] : 1;
+        } else {
+            // mismatch occurred at position j
+            int badCharShift = j - badChar[(int)text[s + j]];
+            int goodSuffixShift = (j < m - 1) ? goodSuffix[j + 1] : 1;
+            
+            // take the maximum shift
+            s += std::max(badCharShift, goodSuffixShift);
+        }
+    }
+    
+    return matches;
 }
