@@ -225,7 +225,7 @@ std::vector<std::pair<size_t, size_t>> RegexEngine::match(const std::vector<Toke
         auto [end_index, matched] = try_match(word, s, 0); //in the case we successfuly find a match we insert it and increment s
         if (matched) { //this ensures we only pushback actual matches
             res.push_back({s, end_index});
-            s = end_index; 
+            s = end_index-1; 
         }
     }
     return res; 
